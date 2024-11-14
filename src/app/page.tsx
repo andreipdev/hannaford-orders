@@ -1,5 +1,5 @@
 'use client'
-import { Box, Button, Container, Heading, Table, Thead, Tbody, Tr, Th, Td, Flex } from '@chakra-ui/react'
+import { Box, Button, Container, Heading, Table, Thead, Tbody, Tr, Th, Td, Flex, Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, useDisclosure } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 
 interface GroceryData {
@@ -7,10 +7,14 @@ interface GroceryData {
   unitPrice: number
   timesPurchased: number
   totalSpent: number
+  monthlyBreakdown: Record<string, number>
+  monthlySpent: Record<string, number>
 }
 
 export default function Home() {
   const [groceryData, setGroceryData] = useState<GroceryData[]>([])
+  const [selectedItem, setSelectedItem] = useState<GroceryData | null>(null)
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,7 +51,10 @@ export default function Home() {
           </Thead>
           <Tbody>
             {groceryData.map((item) => (
-              <Tr key={item.item}>
+              <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => {
+                setSelectedItem(item)
+                onOpen()
+              }}>
                 <Td>{item.item}</Td>
                 <Td isNumeric>${item.unitPrice.toFixed(2)}</Td>
                 <Td isNumeric>{item.timesPurchased}</Td>
@@ -57,6 +64,34 @@ export default function Home() {
           </Tbody>
         </Table>
       </Box>
+
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{selectedItem?.item} - Monthly Breakdown</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Month</Th>
+                  <Th isNumeric>Quantity</Th>
+                  <Th isNumeric>Total Spent</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {selectedItem && Object.entries(selectedItem.monthlyBreakdown).map(([month, quantity]) => (
+                  <Tr key={month}>
+                    <Td>{month}</Td>
+                    <Td isNumeric>{quantity}</Td>
+                    <Td isNumeric>${selectedItem.monthlySpent[month].toFixed(2)}</Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Container>
   )
 }
