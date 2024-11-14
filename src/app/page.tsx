@@ -11,15 +11,12 @@ export default function Home() {
   const [groceryData, setGroceryData] = useState<GroceryData[]>([])
 
   useEffect(() => {
-    // Simulating API call with mock data
-    const mockData: GroceryData[] = [
-      { month: 'January', averageCost: 425.50 },
-      { month: 'February', averageCost: 389.75 },
-      { month: 'March', averageCost: 401.25 },
-      { month: 'April', averageCost: 445.00 },
-      { month: 'May', averageCost: 412.80 },
-    ]
-    setGroceryData(mockData)
+    const fetchData = async () => {
+      const response = await fetch('/api/grocery-data')
+      const data = await response.json()
+      setGroceryData(data)
+    }
+    fetchData()
   }, [])
 
   const handleClipCoupons = () => {
