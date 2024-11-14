@@ -3,8 +3,10 @@ import { Box, Button, Container, Heading, Table, Thead, Tbody, Tr, Th, Td, Flex 
 import { useEffect, useState } from 'react'
 
 interface GroceryData {
-  month: string
-  averageCost: number
+  item: string
+  unitPrice: number
+  timesPurchased: number
+  totalSpent: number
 }
 
 export default function Home() {
@@ -27,7 +29,7 @@ export default function Home() {
   return (
     <Container maxW="container.xl" py={5}>
       <Flex justifyContent="space-between" alignItems="center" mb={6}>
-        <Heading size="lg">Hannaford Orders</Heading>
+        <Heading size="lg">Most Purchased Items</Heading>
         <Button colorScheme="blue" onClick={handleClipCoupons}>
           Clip all coupons
         </Button>
@@ -37,15 +39,19 @@ export default function Home() {
         <Table variant="simple">
           <Thead>
             <Tr>
-              <Th>Month</Th>
-              <Th isNumeric>Average Cost</Th>
+              <Th>Item</Th>
+              <Th isNumeric>Unit Price</Th>
+              <Th isNumeric>Times Purchased</Th>
+              <Th isNumeric>Total Spent</Th>
             </Tr>
           </Thead>
           <Tbody>
             {groceryData.map((item) => (
-              <Tr key={item.month}>
-                <Td>{item.month}</Td>
-                <Td isNumeric>${item.averageCost.toFixed(2)}</Td>
+              <Tr key={item.item}>
+                <Td>{item.item}</Td>
+                <Td isNumeric>${item.unitPrice.toFixed(2)}</Td>
+                <Td isNumeric>{item.timesPurchased}</Td>
+                <Td isNumeric>${item.totalSpent.toFixed(2)}</Td>
               </Tr>
             ))}
           </Tbody>
