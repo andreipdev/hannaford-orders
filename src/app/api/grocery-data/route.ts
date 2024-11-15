@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { HannafordScraper } from '@/services/hannafordScraper'
+import { HannafordScraper } from '../../../services/hannafordScraper'
 
 // Keep mock data for development/testing
 const mockData = [
