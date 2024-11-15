@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "start:hannaford": "node scripts/start-with-credentials.js"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",
@@ -15,7 +16,9 @@
     "framer-motion": "^10.16.5",
     "next": "14.0.3",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "puppeteer": "^21.5.2",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@types/node": "^20",
