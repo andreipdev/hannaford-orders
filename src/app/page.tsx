@@ -27,7 +27,10 @@ export default function Home() {
       setIsLoading(true);
       try {
         const response = await fetch('/api/grocery-data', {
-          signal: controller.signal
+          signal: controller.signal,
+          headers: {
+            'Connection': 'keep-alive'
+          }
         });
         const data = await response.json();
         setGroceryData(data);

@@ -52,6 +52,7 @@ const mockData = [
 })).sort((a, b) => b.totalSpent - a.totalSpent)
 
 export async function GET(request: Request) {
+  const signal = request.signal;
   // Check if we have credentials in environment variables
   const username = process.env.HANNAFORD_USERNAME;
   const password = process.env.HANNAFORD_PASSWORD;
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
   }
   
   try {
-    const scraper = new HannafordScraper();
+    const scraper = new HannafordScraper(signal);
     await scraper.initialize();
     await scraper.login({ username, password });
     

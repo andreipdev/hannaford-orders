@@ -15,8 +15,17 @@ interface PurchaseData {
 export class HannafordScraper {
   private browser: any;
   private page: any;
+  private abortSignal: AbortSignal | undefined;
+
+  constructor(signal?: AbortSignal) {
+    this.abortSignal = signal;
+  }
 
   async initialize() {
+    // Check if already aborted
+    if (this.abortSignal?.aborted) {
+      throw new Error('Operation cancelled');
+    }
     this.browser = await puppeteer.launch({
       headless: 'new' // Use new headless mode
     });
@@ -111,6 +120,12 @@ export class HannafordScraper {
   }
 
   async scrapeOrders(): Promise<PurchaseData[]> {
+    const checkAborted = () => {
+      if (this.abortSignal?.aborted) {
+        this.close(); // Clean up browser resources
+        throw new Error('Operation cancelled');
+      }
+    };
     console.log('Navigating to orders page...');
     await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
       waitUntil: 'networkidle0',
@@ -124,6 +139,7 @@ export class HannafordScraper {
     let hasMoreOrders = true;
     
     while (hasMoreOrders) {
+      checkAborted(); // Check for cancellation before each iteration
       // Wait for orders table to load
       console.log('Waiting for orders to load...');
       try {
