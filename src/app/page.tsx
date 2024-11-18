@@ -22,8 +22,7 @@ export default function Home() {
     const controller = new AbortController();
 
     const fetchData = async () => {
-      // Prevent multiple fetches
-      if (isLoading || hasLoaded) return;
+      if (hasLoaded) return;
       
       setIsLoading(true);
       try {
@@ -49,7 +48,7 @@ export default function Home() {
     return () => {
       controller.abort();
     };
-  }, [isLoading, hasLoaded]);
+  }, [hasLoaded]);
 
   const handleClipCoupons = () => {
     console.log('Clipping all coupons...')
