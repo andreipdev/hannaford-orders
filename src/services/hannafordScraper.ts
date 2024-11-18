@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { CacheService } from './cacheService';
 
 interface HannafordCredentials {
   username: string;
@@ -16,9 +17,13 @@ export class HannafordScraper {
   private browser: any;
   private page: any;
   private abortSignal: AbortSignal | undefined;
+  private cache: CacheService;
+  private processedUrls: Set<string>;
 
   constructor(signal?: AbortSignal) {
     this.abortSignal = signal;
+    this.cache = new CacheService();
+    this.processedUrls = new Set();
   }
 
   async initialize() {
@@ -178,35 +183,55 @@ export class HannafordScraper {
         // Construct full URL for order details
         const orderDetailsUrl = new URL(detailsUrl, 'https://www.hannaford.com').href;
 
-        // Navigate to order details page
-        const detailsPage = await this.browser.newPage();
-        await detailsPage.goto(orderDetailsUrl);
+        // Check if we've already processed this URL
+        if (this.processedUrls.has(orderDetailsUrl)) {
+          console.log(`Skipping already processed order: ${orderDetailsUrl}`);
+          continue;
+        }
 
-        // Wait for the items to load
-        await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
+        // Check cache first
+        let orderItems = this.cache.get(orderDetailsUrl);
+        
+        if (!orderItems) {
+          // Navigate to order details page
+          const detailsPage = await this.browser.newPage();
+          await detailsPage.goto(orderDetailsUrl);
 
-        // Extract items from the order
-        const items = await detailsPage.$$('.item-wrapper');
-        console.log(`Found ${items.length} items in this order`);
-        for (const item of items) {
-          const itemData = await item.evaluate((el: Element) => {
+          // Wait for the items to load
+          await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
+
+          // Extract items from the order
+          const items = await detailsPage.$$('.item-wrapper');
+          
+          // Process items and store in cache
+          orderItems = await Promise.all(items.map(item => item.evaluate((el: Element) => {
             const nameEl = el.querySelector('.productName');
             const qtyEl = el.querySelector('.qty');
             const priceEl = el.querySelector('.item-price');
 
             if (!nameEl || !qtyEl || !priceEl) return null;
 
-            const name = nameEl.textContent?.trim() || '';
-            const quantityText = qtyEl.textContent?.trim() || '0';
-            const priceText = priceEl.getAttribute('value') || '0';
-
             return {
-              name,
-              price: parseFloat(priceText),
-              quantity: parseInt(quantityText)
+              name: nameEl.textContent?.trim() || '',
+              price: parseFloat(priceEl.getAttribute('value') || '0'),
+              quantity: parseInt(qtyEl.textContent?.trim() || '0')
             };
-          });
+          })));
 
+          // Cache the results
+          this.cache.set(orderDetailsUrl, orderItems);
+          
+          // Close the details page
+          await detailsPage.close();
+        } else {
+          console.log(`Using cached data for order: ${orderDetailsUrl}`);
+        }
+
+        // Mark URL as processed
+        this.processedUrls.add(orderDetailsUrl);
+
+        // Process the items
+        orderItems.forEach(itemData => {
           if (itemData) {
             console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
             purchases.push({
@@ -216,10 +241,7 @@ export class HannafordScraper {
               date: orderDate
             });
           }
-        }
-
-        // Close the details page
-        await detailsPage.close();
+        });
       }
 
       // Check if there are more orders to load

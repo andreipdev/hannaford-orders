@@ -2,4 +2,5 @@
 .env
 .env.local
 node_modules
-.next
+.next# Cache directory
+.cache/
