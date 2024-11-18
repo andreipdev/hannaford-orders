@@ -290,17 +290,60 @@ export class HannafordScraper {
   }
 
   processOrderData(purchases: PurchaseData[]) {
+    // Define category mappings
+    const categoryMappings: { [key: string]: string } = {
+      'Pasta': /pasta/i,
+      'Red Bull': /red bull/i,
+      'LU Ecolier': /lu.?ecolier/i,
+      'Rice': /rice/i,
+      'Vinegar': /vinegar/i,
+      'Cider': /cider/i,
+      'Beer': /beer/i,
+      'Steak': /steak/i,
+      'Chicken': /chicken/i,
+      'Hand Soap': /hand.?soap/i,
+      'Potatoes': /potato/i,
+      'Pepperoni': /pepperoni/i,
+      'Chocolate Chips': /chocolate.?chips/i,
+      'Carrots': /carrot/i,
+      'Flour': /flour/i,
+      'Donuts': /donut/i,
+      'Ice Cream': /ice.?cream/i,
+      'Bacon': /bacon/i
+    };
+
+    // Helper function to get category name
+    const getCategoryName = (itemName: string): string => {
+      for (const [category, pattern] of Object.entries(categoryMappings)) {
+        if (pattern.test(itemName)) {
+          return category;
+        }
+      }
+      return itemName;
+    };
+
+    // Track minimum prices for categories
+    const minPrices = new Map<string, number>();
+    
+    // First pass to find minimum prices
+    purchases.forEach(purchase => {
+      const categoryName = getCategoryName(purchase.item);
+      const currentMin = minPrices.get(categoryName) ?? Infinity;
+      minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
+    });
+
     // Group purchases by item and calculate monthly breakdowns
     const itemMap = new Map();
     
     purchases.forEach(purchase => {
+      const categoryName = getCategoryName(purchase.item);
       const month = purchase.date.toLocaleString('default', { month: 'long' });
-      const key = purchase.item;
+      const key = categoryName;
       
       if (!itemMap.has(key)) {
         itemMap.set(key, {
-          item: purchase.item,
-          unitPrice: purchase.unitPrice,
+          item: categoryName,
+          unitPrice: minPrices.get(categoryName) ?? purchase.unitPrice,
           timesPurchased: 0,
           monthlyBreakdown: {},
           totalSpent: 0
