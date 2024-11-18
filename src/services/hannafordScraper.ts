@@ -56,17 +56,53 @@ export class HannafordScraper {
     
     // Find and click the sign in button
     console.log('Looking for sign in button...');
-    const signInButton = await this.page.waitForSelector('button.btn.btn-primary');
+    const signInButton = await this.page.waitForSelector('button.btn.btn-primary', {
+      visible: true,
+      timeout: 30000
+    });
     
+    // Ensure button is visible and clickable
+    await this.page.evaluate((button: Element) => {
+      const rect = button.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        throw new Error('Button has no dimensions');
+      }
+    }, signInButton);
+
     // Click sign in button and wait for navigation
     console.log('Submitting login form...');
-    await Promise.all([
-      this.page.waitForNavigation({ 
-        waitUntil: 'networkidle0',
-        timeout: 60000 
-      }),
-      signInButton.click()
-    ]);
+    try {
+      await Promise.all([
+        this.page.waitForNavigation({ 
+          waitUntil: 'networkidle0',
+          timeout: 60000 
+        }),
+        this.page.evaluate(() => {
+          const button = document.querySelector('button.btn.btn-primary');
+          if (button) {
+            (button as HTMLButtonElement).click();
+          } else {
+            throw new Error('Sign in button not found in DOM');
+          }
+        })
+      ]);
+    } catch (error) {
+      console.error('Error during login submission:', error);
+      const buttonVisible = await this.page.evaluate(() => {
+        const button = document.querySelector('button.btn.btn-primary');
+        if (!button) return 'Button not found';
+        const style = window.getComputedStyle(button);
+        return {
+          display: style.display,
+          visibility: style.visibility,
+          opacity: style.opacity,
+          position: style.position,
+          isVisible: button.offsetParent !== null
+        };
+      });
+      console.log('Button visibility state:', buttonVisible);
+      throw error;
+    }
 
     // Verify login was successful
     console.log('Verifying login status...');
