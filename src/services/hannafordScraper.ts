@@ -124,28 +124,32 @@ export class HannafordScraper {
     let hasMoreOrders = true;
     
     while (hasMoreOrders) {
-      // Wait for orders to load with multiple possible selectors
+      // Wait for orders table to load
       console.log('Waiting for orders to load...');
       try {
-        await Promise.race([
-          this.page.waitForSelector('.order-summary', { timeout: 30000 }),
-          this.page.waitForSelector('.order-history-item', { timeout: 30000 }),
-          this.page.waitForSelector('[data-testid="order-item"]', { timeout: 30000 })
-        ]);
+        await this.page.waitForSelector('.store-purchase-table', { timeout: 30000 });
       } catch (error) {
-        console.error('Failed to find orders on page. Current URL:', await this.page.url());
+        console.error('Failed to find orders table. Current URL:', await this.page.url());
         const content = await this.page.content();
         console.log('Page content:', content);
-        throw new Error('Could not find orders on page - check page structure');
+        throw new Error('Could not find orders table - check page structure');
       }
       
-      // Get all order items on current page
-      const orders = await this.page.$$('.order-summary');
+      // Get all order rows on current page
+      const orders = await this.page.$$('.store-purchase-table tbody tr:not(:last-child)');
       console.log(`Found ${orders.length} orders on current page`);
       
       for (const order of orders) {
-        // Get order date and ID
-        const dateText = await order.$eval('.order-date', (el: any) => el.textContent.trim());
+        // Get order date and details URL
+        const [dateText, detailsUrl] = await order.evaluate((row: Element) => {
+          const dateCell = row.querySelector('.store-date');
+          const detailsLink = row.querySelector('.view-details-link');
+          return [
+            dateCell?.textContent?.trim() || '',
+            detailsLink?.getAttribute('href') || ''
+          ];
+        });
+
         const orderDate = new Date(dateText);
         console.log(`Processing order from ${orderDate.toLocaleDateString()}`);
         
@@ -155,8 +159,8 @@ export class HannafordScraper {
           break;
         }
 
-        // Get the order details URL
-        const orderDetailsUrl = await order.$eval('a.view-details', (el: any) => el.href);
+        // Construct full URL for order details
+        const orderDetailsUrl = new URL(detailsUrl, 'https://www.hannaford.com').href;
         
         // Navigate to order details page
         const detailsPage = await this.browser.newPage();
@@ -199,12 +203,29 @@ export class HannafordScraper {
         await detailsPage.close();
       }
       
-      // Check for and click next page button if it exists
-      const nextButton = await this.page.$('a.next:not(.disabled)');
-      if (nextButton && hasMoreOrders) {
-        console.log('Moving to next page...');
-        await nextButton.click();
-        await this.page.waitForTimeout(2000); // Wait for page transition
+      // Check if there are more orders to load
+      const hasMoreOrdersToFetch = await this.page.evaluate(() => {
+        const paginationData = window.ordersPaginationEventData;
+        return paginationData && paginationData.displaySeeMoreButton;
+      });
+
+      if (hasMoreOrdersToFetch && hasMoreOrders) {
+        console.log('Loading more orders...');
+        try {
+          await Promise.all([
+            this.page.evaluate(() => {
+              window.fetchMoreOrders(window.ordersPaginationEventData);
+            }),
+            this.page.waitForResponse(response => 
+              response.url().includes('/user/instore_orderhistory.jsp'), 
+              { timeout: 30000 }
+            )
+          ]);
+          await this.page.waitForTimeout(2000); // Wait for DOM update
+        } catch (error) {
+          console.error('Failed to load more orders:', error);
+          hasMoreOrders = false;
+        }
       } else {
         hasMoreOrders = false;
       }
