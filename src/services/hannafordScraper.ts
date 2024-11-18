@@ -166,20 +166,23 @@ export class HannafordScraper {
         const detailsPage = await this.browser.newPage();
         await detailsPage.goto(orderDetailsUrl);
         
-        // Wait for the items table to load
-        await detailsPage.waitForSelector('table.order-items');
+        // Wait for the items to load
+        await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
         
         // Extract items from the order
-        const items = await detailsPage.$$('table.order-items tr:not(.header-row)');
+        const items = await detailsPage.$$('.item-wrapper');
         console.log(`Found ${items.length} items in this order`);
         for (const item of items) {
-          const itemData = await item.evaluate((el: any) => {
-            const columns = el.querySelectorAll('td');
-            if (columns.length < 4) return null; // Skip if not a valid item row
+          const itemData = await item.evaluate((el: Element) => {
+            const nameEl = el.querySelector('.productName');
+            const qtyEl = el.querySelector('.qty');
+            const priceEl = el.querySelector('.item-price');
             
-            const name = columns[0].textContent.trim();
-            const quantityText = columns[1].textContent.trim();
-            const priceText = columns[3].textContent.trim().replace('$', '');
+            if (!nameEl || !qtyEl || !priceEl) return null;
+            
+            const name = nameEl.textContent?.trim() || '';
+            const quantityText = qtyEl.textContent?.trim() || '0';
+            const priceText = priceEl.getAttribute('value') || '0';
             
             return {
               name,
