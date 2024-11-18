@@ -24,20 +24,56 @@ export class HannafordScraper {
     this.abortSignal = signal;
     this.cache = new CacheService();
     this.processedUrls = new Set();
+
+    // Ensure cleanup on process termination
+    process.on('exit', this.cleanup.bind(this));
+    process.on('SIGINT', this.cleanup.bind(this));
+    process.on('SIGTERM', this.cleanup.bind(this));
+    process.on('uncaughtException', async (error) => {
+      console.error('Uncaught exception:', error);
+      await this.cleanup();
+      process.exit(1);
+    });
+  }
+
+  private async cleanup() {
+    console.log('Cleaning up Puppeteer resources...');
+    if (this.page) {
+      try {
+        await this.page.close();
+      } catch (error) {
+        console.error('Error closing page:', error);
+      }
+      this.page = null;
+    }
+    if (this.browser) {
+      try {
+        await this.browser.close();
+      } catch (error) {
+        console.error('Error closing browser:', error);
+      }
+      this.browser = null;
+    }
   }
 
   async initialize() {
-    // Check if already aborted
-    if (this.abortSignal?.aborted) {
-      throw new Error('Operation cancelled');
+    try {
+      // Check if already aborted
+      if (this.abortSignal?.aborted) {
+        throw new Error('Operation cancelled');
+      }
+      this.browser = await puppeteer.launch({
+        headless: 'new' // Use new headless mode
+      });
+      this.page = await this.browser.newPage();
+    } catch (error) {
+      await this.cleanup();
+      throw error;
     }
-    this.browser = await puppeteer.launch({
-      headless: 'new' // Use new headless mode
-    });
-    this.page = await this.browser.newPage();
   }
 
   async login(credentials: HannafordCredentials) {
+    try {
     console.log('Navigating to login page...');
     await this.page.goto('https://www.hannaford.com/login', {
       waitUntil: 'networkidle0',
@@ -122,15 +158,19 @@ export class HannafordScraper {
       console.log('Page content after login attempt:', content);
       throw new Error('Login failed - could not verify successful login');
     }
+    } catch (error) {
+      await this.cleanup();
+      throw error;
+    }
   }
 
   async scrapeOrders(): Promise<PurchaseData[]> {
-    const checkAborted = () => {
-      if (this.abortSignal?.aborted) {
-        this.close(); // Clean up browser resources
-        throw new Error('Operation cancelled');
-      }
-    };
+    try {
+      const checkAborted = () => {
+        if (this.abortSignal?.aborted) {
+          throw new Error('Operation cancelled');
+        }
+      };
     console.log('Navigating to orders page...');
     await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
       waitUntil: 'networkidle0',
@@ -303,12 +343,14 @@ export class HannafordScraper {
     }
 
     return purchases;
+    } catch (error) {
+      await this.cleanup();
+      throw error;
+    }
   }
 
   async close() {
-    if (this.browser) {
-      await this.browser.close();
-    }
+    await this.cleanup();
   }
 
   processOrderData(purchases: PurchaseData[]) {
