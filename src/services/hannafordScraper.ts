@@ -54,56 +54,7 @@ export class HannafordScraper {
     await usernameSelector.type(credentials.username);
     await passwordSelector.type(credentials.password);
     
-    // Find and click the sign in button
-    console.log('Looking for sign in button...');
-    
-    // Log all buttons on the page for debugging
-    const buttonTexts = await this.page.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      return buttons.map(button => ({
-        text: button.textContent?.trim(),
-        class: button.className,
-        type: button.getAttribute('type'),
-        id: button.id
-      }));
-    });
-    console.log('Available buttons:', buttonTexts);
-
-    // Try multiple possible button selectors
-    const buttonSelectors = [
-      'button.btn.btn-primary',
-      'button[type="submit"]',
-      'button:contains("Sign In")',
-      'button:contains("Login")',
-      '#signin-button',
-      '.login-button'
-    ];
-
-    let signInButton = null;
-    for (const selector of buttonSelectors) {
-      console.log(`Trying selector: ${selector}`);
-      try {
-        signInButton = await this.page.waitForSelector(selector, {
-          visible: true,
-          timeout: 5000
-        });
-        if (signInButton) {
-          console.log(`Found button with selector: ${selector}`);
-          break;
-        }
-      } catch (error) {
-        console.log(`Selector ${selector} not found`);
-      }
-    }
-
-    if (!signInButton) {
-      console.error('Login button not found, dumping page content...');
-      const content = await this.page.content();
-      console.log('Page HTML:', content);
-      throw new Error('Could not find login button with any known selector');
-    }
-
-    // Click sign in button and wait for navigation
+    // Submit the login form by calling the registerUserLoyalty function directly
     console.log('Submitting login form...');
     try {
       await Promise.all([
@@ -111,7 +62,14 @@ export class HannafordScraper {
           waitUntil: 'networkidle0',
           timeout: 60000 
         }),
-        signInButton.click()
+        this.page.evaluate(() => {
+          // Call the login function directly
+          if (typeof registerUserLoyalty === 'function') {
+            registerUserLoyalty();
+          } else {
+            throw new Error('registerUserLoyalty function not found');
+          }
+        })
       ]);
     } catch (error) {
       console.error('Error during login submission:', error);
