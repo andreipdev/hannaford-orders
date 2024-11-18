@@ -30,31 +30,24 @@ export class HannafordScraper {
       timeout: 60000
     });
     
-    // Add delay and log page content for debugging
+    // Wait for Okta redirect
     await this.page.waitForTimeout(5000);
     console.log('Current URL:', await this.page.url());
     
-    // Wait for either the login form or username field
-    console.log('Waiting for login elements...');
+    // Wait for Okta login form
+    console.log('Waiting for Okta login form...');
     try {
-      await Promise.race([
-        this.page.waitForSelector('#signInForm', { timeout: 30000 }),
-        this.page.waitForSelector('#username', { timeout: 30000 }),
-        this.page.waitForSelector('input[type="email"]', { timeout: 30000 })
-      ]);
+      await this.page.waitForSelector('#okta-signin-username', { timeout: 30000 });
     } catch (error) {
-      console.error('Login form not found, dumping page content...');
+      console.error('Okta login form not found, dumping page content...');
       const content = await this.page.content();
       console.log(content);
-      throw new Error('Login form not found - check page structure');
+      throw new Error('Okta login form not found - check page structure');
     }
     
-    // Find the actual username and password fields
-    const usernameSelector = await Promise.race([
-      this.page.waitForSelector('#username'),
-      this.page.waitForSelector('input[type="email"]')
-    ]);
-    const passwordSelector = await this.page.waitForSelector('#password, input[type="password"]');
+    // Find the username and password fields
+    const usernameSelector = await this.page.waitForSelector('#okta-signin-username');
+    const passwordSelector = await this.page.waitForSelector('#okta-signin-password');
     
     // Type credentials
     console.log('Entering credentials...');
@@ -62,13 +55,11 @@ export class HannafordScraper {
     await passwordSelector.type(credentials.password);
     
     // Find and click the sign in button
-    console.log('Looking for sign in button...');
-    const signInButton = await this.page.waitForSelector(
-      '#signInButton, button[type="submit"], input[type="submit"]'
-    );
+    console.log('Looking for Okta sign in button...');
+    const signInButton = await this.page.waitForSelector('#okta-signin-submit');
     
     // Click sign in button and wait for navigation
-    console.log('Submitting login form...');
+    console.log('Submitting Okta login form...');
     await Promise.all([
       this.page.waitForNavigation({ 
         waitUntil: 'networkidle0',
@@ -76,6 +67,21 @@ export class HannafordScraper {
       }),
       signInButton.click()
     ]);
+
+    // Handle potential MFA challenge
+    try {
+      const mfaPresent = await this.page.waitForSelector('#input-mfa', { timeout: 5000 });
+      if (mfaPresent) {
+        console.log('MFA challenge detected - manual intervention required');
+        throw new Error('MFA challenge detected - cannot proceed automatically');
+      }
+    } catch (error) {
+      if (!error.message.includes('MFA challenge detected')) {
+        console.log('No MFA challenge detected, proceeding...');
+      } else {
+        throw error;
+      }
+    }
 
     // Verify login was successful
     console.log('Verifying login status...');
