@@ -89,11 +89,13 @@ export class HannafordScraper {
       
       // Get all order items on current page
       const orders = await this.page.$$('.order-summary');
+      console.log(`Found ${orders.length} orders on current page`);
       
       for (const order of orders) {
         // Get order date and ID
         const dateText = await order.$eval('.order-date', (el: any) => el.textContent.trim());
         const orderDate = new Date(dateText);
+        console.log(`Processing order from ${orderDate.toLocaleDateString()}`);
         
         // Stop if order is older than a year
         if (orderDate < oneYearAgo) {
@@ -113,6 +115,7 @@ export class HannafordScraper {
         
         // Extract items from the order
         const items = await detailsPage.$$('table.order-items tr:not(.header-row)');
+        console.log(`Found ${items.length} items in this order`);
         for (const item of items) {
           const itemData = await item.evaluate((el: any) => {
             const columns = el.querySelectorAll('td');
@@ -130,6 +133,7 @@ export class HannafordScraper {
           });
           
           if (itemData) {
+            console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
             purchases.push({
               item: itemData.name,
               unitPrice: itemData.price,
@@ -146,6 +150,7 @@ export class HannafordScraper {
       // Check for and click next page button if it exists
       const nextButton = await this.page.$('a.next:not(.disabled)');
       if (nextButton && hasMoreOrders) {
+        console.log('Moving to next page...');
         await nextButton.click();
         await this.page.waitForTimeout(2000); // Wait for page transition
       } else {
