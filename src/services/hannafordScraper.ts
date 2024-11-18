@@ -63,7 +63,12 @@ export class HannafordScraper {
         throw new Error('Operation cancelled');
       }
       this.browser = await puppeteer.launch({
-        headless: 'new' // Use new headless mode
+        headless: 'new', // Use new headless mode
+        args: [
+          '--disable-http2',
+          '--no-sandbox',
+          '--disable-setuid-sandbox'
+        ]
       });
       this.page = await this.browser.newPage();
     } catch (error) {
