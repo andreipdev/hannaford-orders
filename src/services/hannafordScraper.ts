@@ -30,24 +30,24 @@ export class HannafordScraper {
       timeout: 60000
     });
     
-    // Wait for Okta redirect
+    // Wait for page load
     await this.page.waitForTimeout(5000);
     console.log('Current URL:', await this.page.url());
     
-    // Wait for Okta login form
-    console.log('Waiting for Okta login form...');
+    // Wait for login form
+    console.log('Waiting for login form...');
     try {
-      await this.page.waitForSelector('#okta-signin-username', { timeout: 30000 });
+      await this.page.waitForSelector('#userName', { timeout: 30000 });
     } catch (error) {
-      console.error('Okta login form not found, dumping page content...');
+      console.error('Login form not found, dumping page content...');
       const content = await this.page.content();
       console.log(content);
-      throw new Error('Okta login form not found - check page structure');
+      throw new Error('Login form not found - check page structure');
     }
     
     // Find the username and password fields
-    const usernameSelector = await this.page.waitForSelector('#okta-signin-username');
-    const passwordSelector = await this.page.waitForSelector('#okta-signin-password');
+    const usernameSelector = await this.page.waitForSelector('#userName');
+    const passwordSelector = await this.page.waitForSelector('#passwordField6');
     
     // Type credentials
     console.log('Entering credentials...');
@@ -55,11 +55,11 @@ export class HannafordScraper {
     await passwordSelector.type(credentials.password);
     
     // Find and click the sign in button
-    console.log('Looking for Okta sign in button...');
-    const signInButton = await this.page.waitForSelector('#okta-signin-submit');
+    console.log('Looking for sign in button...');
+    const signInButton = await this.page.waitForSelector('button.btn.btn-primary');
     
     // Click sign in button and wait for navigation
-    console.log('Submitting Okta login form...');
+    console.log('Submitting login form...');
     await Promise.all([
       this.page.waitForNavigation({ 
         waitUntil: 'networkidle0',
@@ -67,21 +67,6 @@ export class HannafordScraper {
       }),
       signInButton.click()
     ]);
-
-    // Handle potential MFA challenge
-    try {
-      const mfaPresent = await this.page.waitForSelector('#input-mfa', { timeout: 5000 });
-      if (mfaPresent) {
-        console.log('MFA challenge detected - manual intervention required');
-        throw new Error('MFA challenge detected - cannot proceed automatically');
-      }
-    } catch (error) {
-      if (!error.message.includes('MFA challenge detected')) {
-        console.log('No MFA challenge detected, proceeding...');
-      } else {
-        throw error;
-      }
-    }
 
     // Verify login was successful
     console.log('Verifying login status...');
