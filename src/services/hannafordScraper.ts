@@ -298,7 +298,7 @@ export class HannafordScraper {
       'Rice': /(rice|jasmine|basmati)/i,
       'Vinegar': /vinegar/i,
       'Cider': /cider/i,
-      'Beer': /beer/i,
+      'Beer': /(beer|pilsner)/i,
       'Steak': /(steak|beef|sirloin|ribeye)/i,
       'Chicken': /(chicken|poultry)/i,
       'Hand Soap': /hand.?soap/i,
