@@ -291,34 +291,34 @@ export class HannafordScraper {
 
   processOrderData(purchases: PurchaseData[]) {
     // Define category mappings
-    const categoryMappings: { [key: string]: string } = {
-      'Pasta': /pasta/i,
+    const categoryMappings: { [key: string]: RegExp } = {
+      'Pasta': /(pasta|spaghetti|ziti|penne|rotini|linguine|fettuccine|lasagna|macaroni|rigatoni)/i,
       'Red Bull': /red bull/i,
       'LU Ecolier': /lu.?ecolier/i,
-      'Rice': /rice/i,
+      'Rice': /(rice|jasmine|basmati)/i,
       'Vinegar': /vinegar/i,
       'Cider': /cider/i,
       'Beer': /beer/i,
-      'Steak': /steak/i,
-      'Chicken': /chicken/i,
+      'Steak': /(steak|beef|sirloin|ribeye)/i,
+      'Chicken': /(chicken|poultry)/i,
       'Hand Soap': /hand.?soap/i,
-      'Potatoes': /potato/i,
+      'Potatoes': /(potato|potatoes|yukon|russet)/i,
       'Pepperoni': /pepperoni/i,
       'Chocolate Chips': /chocolate.?chips/i,
       'Carrots': /carrot/i,
-      'Flour': /flour/i,
-      'Donuts': /donut/i,
-      'Ice Cream': /ice.?cream/i,
+      'Flour': /(flour|all.?purpose)/i,
+      'Donuts': /(donut|doughnut)/i,
+      'Ice Cream': /(ice.?cream|gelato)/i,
       'Bacon': /bacon/i,
-      'Butter': /butter/i,
-      'Cucumbers': /cucumbers/i,
-      'Paper towels': /paper.?towels/i,
-      'White Bread': /white.?bread/i,
+      'Butter': /(butter|margarine)/i,
+      'Cucumbers': /cucumber/i,
+      'Paper towels': /paper.?towels?/i,
+      'White Bread': /(white.?bread|sandwich.?bread)/i,
       'Deodorant': /deodorant/i,
       'Shampoo': /shampoo/i,
-      'Coffee': /coffee/i,
+      'Coffee': /(coffee|espresso)/i,
       'Pizza Dough': /pizza.?dough/i,
-      'Salmon': /salmon/i
+      'Salmon': /(salmon|fish)/i
     };
 
     // Helper function to get category name
