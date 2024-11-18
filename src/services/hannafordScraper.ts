@@ -79,7 +79,6 @@ export class HannafordScraper {
 
   async login(credentials: HannafordCredentials) {
     try {
-    console.log('Navigating to login page...');
     await this.page.goto('https://www.hannaford.com/login', {
       waitUntil: 'networkidle0',
       timeout: 60000
@@ -87,16 +86,11 @@ export class HannafordScraper {
 
     // Wait for page load
     await this.page.waitForTimeout(5000);
-    console.log('Current URL:', await this.page.url());
 
     // Wait for login form
-    console.log('Waiting for login form...');
     try {
       await this.page.waitForSelector('#userName', { timeout: 30000 });
     } catch (error) {
-      console.error('Login form not found, dumping page content...');
-      const content = await this.page.content();
-      console.log(content);
       throw new Error('Login form not found - check page structure');
     }
 
@@ -105,47 +99,10 @@ export class HannafordScraper {
     const passwordSelector = await this.page.waitForSelector('#passwordField6');
 
     // Type credentials
-    console.log('Entering credentials...');
     await usernameSelector.type(credentials.username);
     await passwordSelector.type(credentials.password);
-
-    // Submit the login form by calling the registerUserLoyalty function directly
-    console.log('Submitting login form...');
-    
-    // Listen for console messages
-    this.page.on('console', msg => console.log('Browser console:', msg.text()));
-    
-    // Listen for network requests
-    this.page.on('request', request => console.log('Request:', request.url()));
-    this.page.on('requestfailed', request => console.log('Failed request:', request.url(), request.failure()));
     
     try {
-      // Get the current URL before submission
-      console.log('Current URL before submission:', await this.page.url());
-      
-      // Check form state before submission
-      const formState = await this.page.evaluate(() => {
-        const form = document.forms['registerUserLoyaltyForm6'];
-        if (!form) return 'Form not found';
-        return {
-          formExists: true,
-          formId: form.id,
-          formAction: form.action,
-          formMethod: form.method,
-          inputs: Array.from(form.elements).map(el => ({
-            name: (el as HTMLInputElement).name,
-            type: (el as HTMLInputElement).type,
-            value: (el as HTMLInputElement).value?.substring(0, 3) + '...' // Only log first 3 chars for security
-          }))
-        };
-      });
-      console.log('Form state before submission:', JSON.stringify(formState, null, 2));
-
-      // Check if registerUserLoyalty function exists
-      const functionExists = await this.page.evaluate(() => {
-        return typeof registerUserLoyalty === 'function';
-      });
-      console.log('registerUserLoyalty function exists:', functionExists);
 
       await Promise.all([
         // Start waiting for navigation before triggering the login
@@ -163,59 +120,31 @@ export class HannafordScraper {
         
         // Trigger the login
         this.page.evaluate(() => {
-          try {
-            // Call the login function with the correct form and index
-            if (typeof registerUserLoyalty === 'function') {
-              const form = document.forms['registerUserLoyaltyForm6'];
-              if (!form) {
-                throw new Error('Login form not found');
-              }
-              console.log('Calling registerUserLoyalty...');
-              registerUserLoyalty(form, 6);
-              return 'Login function called successfully';
-            } else {
-              throw new Error('registerUserLoyalty function not found');
+          // Call the login function with the correct form and index
+          if (typeof registerUserLoyalty === 'function') {
+            const form = document.forms['registerUserLoyaltyForm6'];
+            if (!form) {
+              throw new Error('Login form not found');
             }
-          } catch (e) {
-            console.error('Error in form submission:', e);
-            throw e;
+            registerUserLoyalty(form, 6);
+          } else {
+            throw new Error('registerUserLoyalty function not found');
           }
         })
       ]);
 
-      // Log URL after submission attempt
-      console.log('Current URL after submission:', await this.page.url());
     } catch (error) {
-      console.error('Error during login submission:', error);
-      const buttonVisible = await this.page.evaluate(() => {
-        const button = document.querySelector('button.btn.btn-primary');
-        if (!button) return 'Button not found';
-        const style = window.getComputedStyle(button);
-        return {
-          display: style.display,
-          visibility: style.visibility,
-          opacity: style.opacity,
-          position: style.position,
-          isVisible: button.offsetParent !== null
-        };
-      });
-      console.log('Button visibility state:', buttonVisible);
       throw error;
     }
 
     // Verify login was successful
-    console.log('Verifying login status...');
     try {
       await Promise.race([
         this.page.waitForSelector('.account-nav', { timeout: 20000 }),
         this.page.waitForSelector('.my-account', { timeout: 20000 }),
         this.page.waitForSelector('[data-testid="account-menu"]', { timeout: 20000 })
       ]);
-      console.log('Login successful');
     } catch (error) {
-      console.error('Login verification failed');
-      const content = await this.page.content();
-      console.log('Page content after login attempt:', content);
       throw new Error('Login failed - could not verify successful login');
     }
     } catch (error) {
