@@ -248,26 +248,26 @@ export class HannafordScraper {
             return response.text();
           }, currentIndex);
 
-          // Parse the HTML response
-          const parser = new DOMParser();
-          const htmlDoc = parser.parseFromString(response, 'text/html');
-
           // Update the page content
           await this.page.evaluate((htmlContent) => {
+            // Create a temporary container and insert the HTML
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
 
             // Update the order history wrapper
             const existingWrapper = document.getElementById('orderHistoryWrapper');
-            if (existingWrapper) {
-              existingWrapper.innerHTML = tempDiv.querySelector('#orderHistoryWrapper').innerHTML;
+            const newWrapper = tempDiv.querySelector('#orderHistoryWrapper');
+            if (existingWrapper && newWrapper) {
+              existingWrapper.innerHTML = newWrapper.innerHTML;
             }
 
-            // Update pagination data if present
-            const scriptContent = tempDiv.querySelector('script:not([src])');
-            if (scriptContent && scriptContent.textContent.includes('ordersPaginationEventData')) {
-              eval(scriptContent.textContent);
-            }
+            // Find and evaluate any pagination scripts
+            const scripts = tempDiv.querySelectorAll('script:not([src])');
+            scripts.forEach(script => {
+              if (script.textContent?.includes('ordersPaginationEventData')) {
+                eval(script.textContent);
+              }
+            });
           }, response);
 
           await this.page.waitForTimeout(1000); // Short wait for DOM update
