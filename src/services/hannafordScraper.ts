@@ -106,25 +106,80 @@ export class HannafordScraper {
 
     // Submit the login form by calling the registerUserLoyalty function directly
     console.log('Submitting login form...');
+    
+    // Listen for console messages
+    this.page.on('console', msg => console.log('Browser console:', msg.text()));
+    
+    // Listen for network requests
+    this.page.on('request', request => console.log('Request:', request.url()));
+    this.page.on('requestfailed', request => console.log('Failed request:', request.url(), request.failure()));
+    
     try {
+      // Get the current URL before submission
+      console.log('Current URL before submission:', await this.page.url());
+      
+      // Check form state before submission
+      const formState = await this.page.evaluate(() => {
+        const form = document.forms['registerUserLoyaltyForm6'];
+        if (!form) return 'Form not found';
+        return {
+          formExists: true,
+          formId: form.id,
+          formAction: form.action,
+          formMethod: form.method,
+          inputs: Array.from(form.elements).map(el => ({
+            name: (el as HTMLInputElement).name,
+            type: (el as HTMLInputElement).type,
+            value: (el as HTMLInputElement).value?.substring(0, 3) + '...' // Only log first 3 chars for security
+          }))
+        };
+      });
+      console.log('Form state before submission:', JSON.stringify(formState, null, 2));
+
+      // Check if registerUserLoyalty function exists
+      const functionExists = await this.page.evaluate(() => {
+        return typeof registerUserLoyalty === 'function';
+      });
+      console.log('registerUserLoyalty function exists:', functionExists);
+
       await Promise.all([
+        // Start waiting for navigation before triggering the login
         this.page.waitForNavigation({
-          waitUntil: 'networkidle0',
+          waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
           timeout: 60000
+        }).catch(error => {
+          console.error('Navigation error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+          });
+          throw error;
         }),
+        
+        // Trigger the login
         this.page.evaluate(() => {
-          // Call the login function with the correct form and index
-          if (typeof registerUserLoyalty === 'function') {
-            const form = document.forms['registerUserLoyaltyForm6'];
-            if (!form) {
-              throw new Error('Login form not found');
+          try {
+            // Call the login function with the correct form and index
+            if (typeof registerUserLoyalty === 'function') {
+              const form = document.forms['registerUserLoyaltyForm6'];
+              if (!form) {
+                throw new Error('Login form not found');
+              }
+              console.log('Calling registerUserLoyalty...');
+              registerUserLoyalty(form, 6);
+              return 'Login function called successfully';
+            } else {
+              throw new Error('registerUserLoyalty function not found');
             }
-            registerUserLoyalty(form, 6);
-          } else {
-            throw new Error('registerUserLoyalty function not found');
+          } catch (e) {
+            console.error('Error in form submission:', e);
+            throw e;
           }
         })
       ]);
+
+      // Log URL after submission attempt
+      console.log('Current URL after submission:', await this.page.url());
     } catch (error) {
       console.error('Error during login submission:', error);
       const buttonVisible = await this.page.evaluate(() => {
