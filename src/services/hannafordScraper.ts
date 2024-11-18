@@ -26,14 +26,52 @@ export class HannafordScraper {
   async login(credentials: HannafordCredentials) {
     await this.page.goto('https://www.hannaford.com/login');
     
-    // TODO: Implement actual login selectors
-    // These selectors need to be verified with the actual Hannaford website
-    await this.page.type('#username', credentials.username);
-    await this.page.type('#password', credentials.password);
-    await this.page.click('#login-button');
+    // Wait for the CSRF token to be available
+    await this.page.waitForSelector('input[name="CSRF_TOKEN_HEADER"]');
     
-    // Wait for login to complete
-    await this.page.waitForNavigation();
+    // Get CSRF token
+    const csrfToken = await this.page.$eval('input[name="CSRF_TOKEN_HEADER"]', 
+      (el: any) => el.value
+    );
+
+    // Set up the form data
+    const formData = new URLSearchParams({
+      'form_state': 'loginForm1',
+      'CSRF_TOKEN_HEADER': csrfToken,
+      'isFromHeader': 'true',
+      'dest': 'https://www.hannaford.com/',
+      'loginAction': 'TRUE',
+      'userName': credentials.username,
+      'password': credentials.password
+    });
+
+    // Perform the login request
+    await this.page.setRequestInterception(true);
+    this.page.once('request', (request: any) => {
+      request.continue({
+        method: 'POST',
+        postData: formData.toString(),
+        headers: {
+          ...request.headers(),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+    });
+
+    // Submit the form and wait for navigation
+    await Promise.all([
+      this.page.waitForNavigation(),
+      this.page.$eval('form[name="loginForm1"]', (form: any) => form.submit())
+    ]);
+
+    // Verify login was successful
+    const isLoggedIn = await this.page.evaluate(() => {
+      return !document.querySelector('form[name="loginForm1"]');
+    });
+
+    if (!isLoggedIn) {
+      throw new Error('Login failed');
+    }
   }
 
   async scrapeOrders(): Promise<PurchaseData[]> {
