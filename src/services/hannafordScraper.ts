@@ -25,31 +25,71 @@ export class HannafordScraper {
 
   async login(credentials: HannafordCredentials) {
     console.log('Navigating to login page...');
-    await this.page.goto('https://www.hannaford.com/login');
+    await this.page.goto('https://www.hannaford.com/login', {
+      waitUntil: 'networkidle0',
+      timeout: 60000
+    });
     
-    // Wait for the login form to be available
-    console.log('Waiting for login form...');
-    await this.page.waitForSelector('#signInForm', { timeout: 60000 });
+    // Add delay and log page content for debugging
+    await this.page.waitForTimeout(5000);
+    console.log('Current URL:', await this.page.url());
+    
+    // Wait for either the login form or username field
+    console.log('Waiting for login elements...');
+    try {
+      await Promise.race([
+        this.page.waitForSelector('#signInForm', { timeout: 30000 }),
+        this.page.waitForSelector('#username', { timeout: 30000 }),
+        this.page.waitForSelector('input[type="email"]', { timeout: 30000 })
+      ]);
+    } catch (error) {
+      console.error('Login form not found, dumping page content...');
+      const content = await this.page.content();
+      console.log(content);
+      throw new Error('Login form not found - check page structure');
+    }
+    
+    // Find the actual username and password fields
+    const usernameSelector = await Promise.race([
+      this.page.waitForSelector('#username'),
+      this.page.waitForSelector('input[type="email"]')
+    ]);
+    const passwordSelector = await this.page.waitForSelector('#password, input[type="password"]');
     
     // Type credentials
     console.log('Entering credentials...');
-    await this.page.type('#username', credentials.username);
-    await this.page.type('#password', credentials.password);
+    await usernameSelector.type(credentials.username);
+    await passwordSelector.type(credentials.password);
+    
+    // Find and click the sign in button
+    console.log('Looking for sign in button...');
+    const signInButton = await this.page.waitForSelector(
+      '#signInButton, button[type="submit"], input[type="submit"]'
+    );
     
     // Click sign in button and wait for navigation
     console.log('Submitting login form...');
     await Promise.all([
-      this.page.waitForNavigation({ waitUntil: 'networkidle0' }),
-      this.page.click('#signInButton')
+      this.page.waitForNavigation({ 
+        waitUntil: 'networkidle0',
+        timeout: 60000 
+      }),
+      signInButton.click()
     ]);
 
-    // Verify login was successful by checking for account-related elements
+    // Verify login was successful
     console.log('Verifying login status...');
     try {
-      await this.page.waitForSelector('.account-nav, .my-account', { timeout: 10000 });
+      await Promise.race([
+        this.page.waitForSelector('.account-nav', { timeout: 20000 }),
+        this.page.waitForSelector('.my-account', { timeout: 20000 }),
+        this.page.waitForSelector('[data-testid="account-menu"]', { timeout: 20000 })
+      ]);
       console.log('Login successful');
     } catch (error) {
       console.error('Login verification failed');
+      const content = await this.page.content();
+      console.log('Page content after login attempt:', content);
       throw new Error('Login failed - could not verify successful login');
     }
   }
