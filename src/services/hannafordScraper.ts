@@ -63,9 +63,13 @@ export class HannafordScraper {
           timeout: 60000 
         }),
         this.page.evaluate(() => {
-          // Call the login function directly
+          // Call the login function with the correct form and index
           if (typeof registerUserLoyalty === 'function') {
-            registerUserLoyalty();
+            const form = document.forms['registerUserLoyaltyForm6'];
+            if (!form) {
+              throw new Error('Login form not found');
+            }
+            registerUserLoyalty(form, 6);
           } else {
             throw new Error('registerUserLoyalty function not found');
           }
