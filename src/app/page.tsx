@@ -127,7 +127,7 @@ export default function Home() {
                   <Tr key={month}>
                     <Td>{month}</Td>
                     <Td isNumeric>{quantity}</Td>
-                    <Td isNumeric>${selectedItem.monthlySpent[month].toFixed(2)}</Td>
+                    <Td isNumeric>${(selectedItem.monthlySpent?.[month] || 0).toFixed(2)}</Td>
                   </Tr>
                 ))}
               </Tbody>

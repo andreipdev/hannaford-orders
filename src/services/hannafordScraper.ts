@@ -355,6 +355,14 @@ export class HannafordScraper {
       itemData.monthlyBreakdown[month] = (itemData.monthlyBreakdown[month] || 0) + purchase.quantity;
       itemData.totalSpent += purchase.unitPrice * purchase.quantity;
     });
+
+    // Calculate monthly spent for each item
+    for (const itemData of itemMap.values()) {
+      itemData.monthlySpent = {};
+      Object.entries(itemData.monthlyBreakdown).forEach(([month, quantity]) => {
+        itemData.monthlySpent[month] = quantity * itemData.unitPrice;
+      });
+    }
     
     return Array.from(itemMap.values());
   }
