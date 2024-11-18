@@ -215,16 +215,46 @@ export class HannafordScraper {
       if (hasMoreOrdersToFetch && hasMoreOrders) {
         console.log('Loading more orders...');
         try {
-          await Promise.all([
-            this.page.evaluate(() => {
-              window.fetchMoreOrders(window.ordersPaginationEventData);
-            }),
-            this.page.waitForResponse(response => 
-              response.url().includes('/user/instore_orderhistory.jsp'), 
-              { timeout: 30000 }
-            )
-          ]);
-          await this.page.waitForTimeout(2000); // Wait for DOM update
+          // Get the current index for the next page
+          const currentIndex = await this.page.evaluate(() => {
+            return window.ordersPaginationEventData?.nextIndex || 0;
+          });
+
+          // Make the AJAX request directly
+          const response = await this.page.evaluate(async (index) => {
+            const response = await fetch('/account/my-orders/in-store', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: `ajaxRefresh=true&currentIndex=${index}`
+            });
+            return response.text();
+          }, currentIndex);
+
+          // Parse the HTML response
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(response, 'text/html');
+          
+          // Update the page content
+          await this.page.evaluate((htmlContent) => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // Update the order history wrapper
+            const existingWrapper = document.getElementById('orderHistoryWrapper');
+            if (existingWrapper) {
+              existingWrapper.innerHTML = tempDiv.querySelector('#orderHistoryWrapper').innerHTML;
+            }
+            
+            // Update pagination data if present
+            const scriptContent = tempDiv.querySelector('script:not([src])');
+            if (scriptContent && scriptContent.textContent.includes('ordersPaginationEventData')) {
+              eval(scriptContent.textContent);
+            }
+          }, response);
+
+          await this.page.waitForTimeout(1000); // Short wait for DOM update
         } catch (error) {
           console.error('Failed to load more orders:', error);
           hasMoreOrders = false;
