@@ -111,7 +111,11 @@ export class HannafordScraper {
   }
 
   async scrapeOrders(): Promise<PurchaseData[]> {
-    await this.page.goto('https://www.hannaford.com/account/my-orders/in-store');
+    console.log('Navigating to orders page...');
+    await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
+      waitUntil: 'networkidle0',
+      timeout: 60000
+    });
     
     const purchases: PurchaseData[] = [];
     const oneYearAgo = new Date();
@@ -120,8 +124,20 @@ export class HannafordScraper {
     let hasMoreOrders = true;
     
     while (hasMoreOrders) {
-      // Wait for orders to load
-      await this.page.waitForSelector('.order-summary');
+      // Wait for orders to load with multiple possible selectors
+      console.log('Waiting for orders to load...');
+      try {
+        await Promise.race([
+          this.page.waitForSelector('.order-summary', { timeout: 30000 }),
+          this.page.waitForSelector('.order-history-item', { timeout: 30000 }),
+          this.page.waitForSelector('[data-testid="order-item"]', { timeout: 30000 })
+        ]);
+      } catch (error) {
+        console.error('Failed to find orders on page. Current URL:', await this.page.url());
+        const content = await this.page.content();
+        console.log('Page content:', content);
+        throw new Error('Could not find orders on page - check page structure');
+      }
       
       // Get all order items on current page
       const orders = await this.page.$$('.order-summary');
