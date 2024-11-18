@@ -38,11 +38,11 @@ export class HannafordScraper {
       waitUntil: 'networkidle0',
       timeout: 60000
     });
-    
+
     // Wait for page load
     await this.page.waitForTimeout(5000);
     console.log('Current URL:', await this.page.url());
-    
+
     // Wait for login form
     console.log('Waiting for login form...');
     try {
@@ -53,23 +53,23 @@ export class HannafordScraper {
       console.log(content);
       throw new Error('Login form not found - check page structure');
     }
-    
+
     // Find the username and password fields
     const usernameSelector = await this.page.waitForSelector('#userName');
     const passwordSelector = await this.page.waitForSelector('#passwordField6');
-    
+
     // Type credentials
     console.log('Entering credentials...');
     await usernameSelector.type(credentials.username);
     await passwordSelector.type(credentials.password);
-    
+
     // Submit the login form by calling the registerUserLoyalty function directly
     console.log('Submitting login form...');
     try {
       await Promise.all([
-        this.page.waitForNavigation({ 
+        this.page.waitForNavigation({
           waitUntil: 'networkidle0',
-          timeout: 60000 
+          timeout: 60000
         }),
         this.page.evaluate(() => {
           // Call the login function with the correct form and index
@@ -131,13 +131,13 @@ export class HannafordScraper {
       waitUntil: 'networkidle0',
       timeout: 60000
     });
-    
+
     const purchases: PurchaseData[] = [];
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    
+
     let hasMoreOrders = true;
-    
+
     while (hasMoreOrders) {
       checkAborted(); // Check for cancellation before each iteration
       // Wait for orders table to load
@@ -150,11 +150,11 @@ export class HannafordScraper {
         console.log('Page content:', content);
         throw new Error('Could not find orders table - check page structure');
       }
-      
+
       // Get all order rows on current page
       const orders = await this.page.$$('.store-purchase-table tbody tr:not(:last-child)');
       console.log(`Found ${orders.length} orders on current page`);
-      
+
       for (const order of orders) {
         // Get order date and details URL
         const [dateText, detailsUrl] = await order.evaluate((row: Element) => {
@@ -168,7 +168,7 @@ export class HannafordScraper {
 
         const orderDate = new Date(dateText);
         console.log(`Processing order from ${orderDate.toLocaleDateString()}`);
-        
+
         // Stop if order is older than a year
         if (orderDate < oneYearAgo) {
           hasMoreOrders = false;
@@ -177,14 +177,14 @@ export class HannafordScraper {
 
         // Construct full URL for order details
         const orderDetailsUrl = new URL(detailsUrl, 'https://www.hannaford.com').href;
-        
+
         // Navigate to order details page
         const detailsPage = await this.browser.newPage();
         await detailsPage.goto(orderDetailsUrl);
-        
+
         // Wait for the items to load
         await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
-        
+
         // Extract items from the order
         const items = await detailsPage.$$('.item-wrapper');
         console.log(`Found ${items.length} items in this order`);
@@ -193,20 +193,20 @@ export class HannafordScraper {
             const nameEl = el.querySelector('.productName');
             const qtyEl = el.querySelector('.qty');
             const priceEl = el.querySelector('.item-price');
-            
+
             if (!nameEl || !qtyEl || !priceEl) return null;
-            
+
             const name = nameEl.textContent?.trim() || '';
             const quantityText = qtyEl.textContent?.trim() || '0';
             const priceText = priceEl.getAttribute('value') || '0';
-            
+
             return {
               name,
               price: parseFloat(priceText),
               quantity: parseInt(quantityText)
             };
           });
-          
+
           if (itemData) {
             console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
             purchases.push({
@@ -217,11 +217,11 @@ export class HannafordScraper {
             });
           }
         }
-        
+
         // Close the details page
         await detailsPage.close();
       }
-      
+
       // Check if there are more orders to load
       const hasMoreOrdersToFetch = await this.page.evaluate(() => {
         const paginationData = window.ordersPaginationEventData;
@@ -251,18 +251,18 @@ export class HannafordScraper {
           // Parse the HTML response
           const parser = new DOMParser();
           const htmlDoc = parser.parseFromString(response, 'text/html');
-          
+
           // Update the page content
           await this.page.evaluate((htmlContent) => {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
-            
+
             // Update the order history wrapper
             const existingWrapper = document.getElementById('orderHistoryWrapper');
             if (existingWrapper) {
               existingWrapper.innerHTML = tempDiv.querySelector('#orderHistoryWrapper').innerHTML;
             }
-            
+
             // Update pagination data if present
             const scriptContent = tempDiv.querySelector('script:not([src])');
             if (scriptContent && scriptContent.textContent.includes('ordersPaginationEventData')) {
@@ -279,7 +279,7 @@ export class HannafordScraper {
         hasMoreOrders = false;
       }
     }
-    
+
     return purchases;
   }
 
@@ -309,7 +309,16 @@ export class HannafordScraper {
       'Flour': /flour/i,
       'Donuts': /donut/i,
       'Ice Cream': /ice.?cream/i,
-      'Bacon': /bacon/i
+      'Bacon': /bacon/i,
+      'Butter': /butter/i,
+      'Cucumbers': /cucumbers/i,
+      'Paper towels': /paper.?towels/i,
+      'White Bread': /white.?bread/i,
+      'Deodorant': /deodorant/i,
+      'Shampoo': /shampoo/i,
+      'Coffee': /coffee/i,
+      'Pizza Dough': /pizza.?dough/i,
+      'Salmon': /salmon/i
     };
 
     // Helper function to get category name
@@ -324,7 +333,7 @@ export class HannafordScraper {
 
     // Track minimum prices for categories
     const minPrices = new Map<string, number>();
-    
+
     // First pass to find minimum prices
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
@@ -334,12 +343,12 @@ export class HannafordScraper {
 
     // Group purchases by item and calculate monthly breakdowns
     const itemMap = new Map();
-    
+
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
       const month = purchase.date.toLocaleString('default', { month: 'long' });
       const key = categoryName;
-      
+
       if (!itemMap.has(key)) {
         itemMap.set(key, {
           item: categoryName,
@@ -349,7 +358,7 @@ export class HannafordScraper {
           totalSpent: 0
         });
       }
-      
+
       const itemData = itemMap.get(key);
       itemData.timesPurchased += purchase.quantity;
       itemData.monthlyBreakdown[month] = (itemData.monthlyBreakdown[month] || 0) + purchase.quantity;
@@ -363,7 +372,7 @@ export class HannafordScraper {
         itemData.monthlySpent[month] = quantity * itemData.unitPrice;
       });
     }
-    
+
     return Array.from(itemMap.values());
   }
 }
