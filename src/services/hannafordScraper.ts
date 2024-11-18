@@ -85,13 +85,13 @@ export class HannafordScraper {
     
     while (hasMoreOrders) {
       // Wait for orders to load
-      await this.page.waitForSelector('.order-history-item');
+      await this.page.waitForSelector('.order-summary');
       
       // Get all order items on current page
-      const orders = await this.page.$$('.order-history-item');
+      const orders = await this.page.$$('.order-summary');
       
       for (const order of orders) {
-        // Get order date
+        // Get order date and ID
         const dateText = await order.$eval('.order-date', (el: any) => el.textContent.trim());
         const orderDate = new Date(dateText);
         
@@ -100,31 +100,36 @@ export class HannafordScraper {
           hasMoreOrders = false;
           break;
         }
+
+        // Get the order details URL
+        const orderDetailsUrl = await order.$eval('a.view-details', (el: any) => el.href);
         
-        // Click "View Details" button
-        const viewDetailsButton = await order.$('.view-details-button');
-        if (viewDetailsButton) {
-          await viewDetailsButton.click();
-          
-          // Wait for order details modal to load
-          await this.page.waitForSelector('.order-details-modal');
-          
-          // Extract items from the order
-          const items = await this.page.$$('.order-item');
-          for (const item of items) {
-            const itemData = await item.evaluate((el: any) => {
-              const name = el.querySelector('.item-name').textContent.trim();
-              const priceText = el.querySelector('.item-price').textContent.trim()
-                .replace('$', '');
-              const quantityText = el.querySelector('.item-quantity').textContent.trim();
-              
-              return {
-                name,
-                price: parseFloat(priceText),
-                quantity: parseInt(quantityText)
-              };
-            });
+        // Navigate to order details page
+        const detailsPage = await this.browser.newPage();
+        await detailsPage.goto(orderDetailsUrl);
+        
+        // Wait for the items table to load
+        await detailsPage.waitForSelector('table.order-items');
+        
+        // Extract items from the order
+        const items = await detailsPage.$$('table.order-items tr:not(.header-row)');
+        for (const item of items) {
+          const itemData = await item.evaluate((el: any) => {
+            const columns = el.querySelectorAll('td');
+            if (columns.length < 4) return null; // Skip if not a valid item row
             
+            const name = columns[0].textContent.trim();
+            const quantityText = columns[1].textContent.trim();
+            const priceText = columns[3].textContent.trim().replace('$', '');
+            
+            return {
+              name,
+              price: parseFloat(priceText),
+              quantity: parseInt(quantityText)
+            };
+          });
+          
+          if (itemData) {
             purchases.push({
               item: itemData.name,
               unitPrice: itemData.price,
@@ -132,18 +137,17 @@ export class HannafordScraper {
               date: orderDate
             });
           }
-          
-          // Close the modal
-          await this.page.click('.modal-close-button');
-          await this.page.waitForSelector('.order-details-modal', { hidden: true });
         }
+        
+        // Close the details page
+        await detailsPage.close();
       }
       
       // Check for and click next page button if it exists
-      const nextButton = await this.page.$('.pagination-next:not([disabled])');
+      const nextButton = await this.page.$('a.next:not(.disabled)');
       if (nextButton && hasMoreOrders) {
         await nextButton.click();
-        await this.page.waitForTimeout(1000); // Wait for page transition
+        await this.page.waitForTimeout(2000); // Wait for page transition
       } else {
         hasMoreOrders = false;
       }
