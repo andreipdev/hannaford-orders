@@ -24,53 +24,33 @@ export class HannafordScraper {
   }
 
   async login(credentials: HannafordCredentials) {
+    console.log('Navigating to login page...');
     await this.page.goto('https://www.hannaford.com/login');
     
-    // Wait for the CSRF token to be available
-    await this.page.waitForSelector('input[name="CSRF_TOKEN_HEADER"]');
+    // Wait for the login form to be available
+    console.log('Waiting for login form...');
+    await this.page.waitForSelector('#signInForm', { timeout: 60000 });
     
-    // Get CSRF token
-    const csrfToken = await this.page.$eval('input[name="CSRF_TOKEN_HEADER"]', 
-      (el: any) => el.value
-    );
-
-    // Set up the form data
-    const formData = new URLSearchParams({
-      'form_state': 'loginForm1',
-      'CSRF_TOKEN_HEADER': csrfToken,
-      'isFromHeader': 'true',
-      'dest': 'https://www.hannaford.com/',
-      'loginAction': 'TRUE',
-      'userName': credentials.username,
-      'password': credentials.password
-    });
-
-    // Perform the login request
-    await this.page.setRequestInterception(true);
-    this.page.once('request', (request: any) => {
-      request.continue({
-        method: 'POST',
-        postData: formData.toString(),
-        headers: {
-          ...request.headers(),
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      });
-    });
-
-    // Submit the form and wait for navigation
+    // Type credentials
+    console.log('Entering credentials...');
+    await this.page.type('#username', credentials.username);
+    await this.page.type('#password', credentials.password);
+    
+    // Click sign in button and wait for navigation
+    console.log('Submitting login form...');
     await Promise.all([
-      this.page.waitForNavigation(),
-      this.page.$eval('form[name="loginForm1"]', (form: any) => form.submit())
+      this.page.waitForNavigation({ waitUntil: 'networkidle0' }),
+      this.page.click('#signInButton')
     ]);
 
-    // Verify login was successful
-    const isLoggedIn = await this.page.evaluate(() => {
-      return !document.querySelector('form[name="loginForm1"]');
-    });
-
-    if (!isLoggedIn) {
-      throw new Error('Login failed');
+    // Verify login was successful by checking for account-related elements
+    console.log('Verifying login status...');
+    try {
+      await this.page.waitForSelector('.account-nav, .my-account', { timeout: 10000 });
+      console.log('Login successful');
+    } catch (error) {
+      console.error('Login verification failed');
+      throw new Error('Login failed - could not verify successful login');
     }
   }
 
