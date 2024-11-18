@@ -56,18 +56,52 @@ export class HannafordScraper {
     
     // Find and click the sign in button
     console.log('Looking for sign in button...');
-    const signInButton = await this.page.waitForSelector('button.btn.btn-primary', {
-      visible: true,
-      timeout: 30000
-    });
     
-    // Ensure button is visible and clickable
-    await this.page.evaluate((button: Element) => {
-      const rect = button.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) {
-        throw new Error('Button has no dimensions');
+    // Log all buttons on the page for debugging
+    const buttonTexts = await this.page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      return buttons.map(button => ({
+        text: button.textContent?.trim(),
+        class: button.className,
+        type: button.getAttribute('type'),
+        id: button.id
+      }));
+    });
+    console.log('Available buttons:', buttonTexts);
+
+    // Try multiple possible button selectors
+    const buttonSelectors = [
+      'button.btn.btn-primary',
+      'button[type="submit"]',
+      'button:contains("Sign In")',
+      'button:contains("Login")',
+      '#signin-button',
+      '.login-button'
+    ];
+
+    let signInButton = null;
+    for (const selector of buttonSelectors) {
+      console.log(`Trying selector: ${selector}`);
+      try {
+        signInButton = await this.page.waitForSelector(selector, {
+          visible: true,
+          timeout: 5000
+        });
+        if (signInButton) {
+          console.log(`Found button with selector: ${selector}`);
+          break;
+        }
+      } catch (error) {
+        console.log(`Selector ${selector} not found`);
       }
-    }, signInButton);
+    }
+
+    if (!signInButton) {
+      console.error('Login button not found, dumping page content...');
+      const content = await this.page.content();
+      console.log('Page HTML:', content);
+      throw new Error('Could not find login button with any known selector');
+    }
 
     // Click sign in button and wait for navigation
     console.log('Submitting login form...');
@@ -77,14 +111,7 @@ export class HannafordScraper {
           waitUntil: 'networkidle0',
           timeout: 60000 
         }),
-        this.page.evaluate(() => {
-          const button = document.querySelector('button.btn.btn-primary');
-          if (button) {
-            (button as HTMLButtonElement).click();
-          } else {
-            throw new Error('Sign in button not found in DOM');
-          }
-        })
+        signInButton.click()
       ]);
     } catch (error) {
       console.error('Error during login submission:', error);
