@@ -91,6 +91,12 @@ export class HannafordScraper {
 
   async login(credentials: HannafordCredentials) {
     try {
+      // Check if we need to refresh data before logging in
+      if (!this.shouldRefreshData()) {
+        console.log('Using cached data - skipping login');
+        return;
+      }
+
       console.log('Navigating to login page: https://www.hannaford.com/login');
       await this.page.goto('https://www.hannaford.com/login', {
         waitUntil: 'networkidle0',
