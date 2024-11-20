@@ -16,17 +16,20 @@ export class CacheService {
     }
   }
 
-  private getFilePath(url: string): string {
-    const hash = crypto.createHash('md5').update(url).digest('hex');
+  private getFilePath(key: string, customFilename?: string): string {
+    if (customFilename) {
+      return path.join(this.cacheDir, `${customFilename}.json`);
+    }
+    const hash = crypto.createHash('md5').update(key).digest('hex');
     return path.join(this.cacheDir, `${hash}.json`);
   }
 
-  has(url: string): boolean {
-    return fs.existsSync(this.getFilePath(url));
+  has(key: string, customFilename?: string): boolean {
+    return fs.existsSync(this.getFilePath(key, customFilename));
   }
 
-  get(url: string): any {
-    const filePath = this.getFilePath(url);
+  get(key: string, customFilename?: string): any {
+    const filePath = this.getFilePath(key, customFilename);
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath, 'utf8');
       return JSON.parse(data);
@@ -34,8 +37,8 @@ export class CacheService {
     return null;
   }
 
-  set(url: string, data: any): void {
-    const filePath = this.getFilePath(url);
+  set(key: string, data: any, customFilename?: string): void {
+    const filePath = this.getFilePath(key, customFilename);
     fs.writeFileSync(filePath, JSON.stringify(data));
   }
 }

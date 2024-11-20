@@ -340,7 +340,7 @@ export class HannafordScraper {
             };
           })));
 
-          // Cache the results using the date as both key and filename
+          // Cache the results using the date as key and filename
           this.cache.set(orderDateKey, orderItems, orderDateKey);
           this.addDateToYearCache(orderDateKey);
 
