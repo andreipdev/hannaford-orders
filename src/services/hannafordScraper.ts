@@ -6,6 +6,11 @@ interface HannafordCredentials {
   password: string;
 }
 
+interface ScraperMetadata {
+  lastFetchTimestamp: number;
+  yearCaches: { [year: string]: string[] };  // year -> array of date keys
+}
+
 interface PurchaseData {
   item: string;
   unitPrice: number;
@@ -18,11 +23,14 @@ export class HannafordScraper {
   private page: any;
   private abortSignal: AbortSignal | undefined;
   private cache: CacheService;
+  private metadataCache: CacheService;
   private processedUrls: Set<string>;
+  private static readonly METADATA_KEY = 'scraper_metadata';
 
   constructor(signal?: AbortSignal) {
     this.abortSignal = signal;
     this.cache = new CacheService();
+    this.metadataCache = new CacheService();
     this.processedUrls = new Set();
 
     // Ensure cleanup on process termination
@@ -161,6 +169,39 @@ export class HannafordScraper {
           throw new Error('Operation cancelled');
         }
       };
+
+      const currentYear = new Date().getFullYear().toString();
+      const purchases: PurchaseData[] = [];
+
+      // If we have recent data, use cached data only
+      if (!this.shouldRefreshData()) {
+        console.log('Using cached data from last 24 hours...');
+        const cachedDates = this.getCachedDatesForYear(currentYear);
+        
+        for (const dateKey of cachedDates) {
+          const orderItems = this.cache.get(dateKey);
+          if (orderItems) {
+            orderItems.forEach(itemData => {
+              if (itemData) {
+                purchases.push({
+                  item: itemData.name,
+                  unitPrice: itemData.price,
+                  quantity: itemData.quantity,
+                  date: new Date(dateKey)
+                });
+              }
+            });
+          }
+        }
+        return purchases;
+      }
+
+      // If we need fresh data, proceed with scraping
+      console.log('Cache expired or not found, fetching fresh data...');
+        if (this.abortSignal?.aborted) {
+          throw new Error('Operation cancelled');
+        }
+      };
       console.log('Navigating to orders page...');
       console.log('Navigating to orders page: https://www.hannaford.com/account/my-orders/in-store');
       await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
@@ -294,6 +335,7 @@ export class HannafordScraper {
 
           // Cache the results using the date as key
           this.cache.set(orderDateKey, orderItems);
+          this.addDateToYearCache(orderDateKey);
 
           // Close the details page
           await detailsPage.close();
@@ -318,11 +360,54 @@ export class HannafordScraper {
         });
       }
 
+      // Update last fetch timestamp
+      const metadata = this.getMetadata();
+      metadata.lastFetchTimestamp = Date.now();
+      this.saveMetadata(metadata);
+
       return purchases;
     } catch (error) {
       await this.cleanup();
       throw error;
     }
+  }
+
+  private getMetadata(): ScraperMetadata {
+    const metadata = this.metadataCache.get(HannafordScraper.METADATA_KEY) || {
+      lastFetchTimestamp: 0,
+      yearCaches: {}
+    };
+    return metadata;
+  }
+
+  private saveMetadata(metadata: ScraperMetadata) {
+    this.metadataCache.set(HannafordScraper.METADATA_KEY, metadata);
+  }
+
+  private shouldRefreshData(): boolean {
+    const metadata = this.getMetadata();
+    const now = Date.now();
+    const hoursSinceLastFetch = (now - metadata.lastFetchTimestamp) / (1000 * 60 * 60);
+    return hoursSinceLastFetch >= 24;
+  }
+
+  private addDateToYearCache(date: string) {
+    const year = date.split('-')[0];
+    const metadata = this.getMetadata();
+    
+    if (!metadata.yearCaches[year]) {
+      metadata.yearCaches[year] = [];
+    }
+    
+    if (!metadata.yearCaches[year].includes(date)) {
+      metadata.yearCaches[year].push(date);
+      this.saveMetadata(metadata);
+    }
+  }
+
+  private getCachedDatesForYear(year: string): string[] {
+    const metadata = this.getMetadata();
+    return metadata.yearCaches[year] || [];
   }
 
   async close() {
