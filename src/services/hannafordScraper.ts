@@ -204,12 +204,18 @@ export class HannafordScraper {
             break;
           }
           
-          const fullUrl = new URL(order.url, 'https://www.hannaford.com').href;
-          if (!this.processedUrls.has(fullUrl)) {
-            ordersList.push({
-              url: fullUrl,
-              date: orderDate
-            });
+          if (order.url) {
+            const fullUrl = new URL(order.url, 'https://www.hannaford.com').href;
+            if (!this.processedUrls.has(fullUrl)) {
+              ordersList.push({
+                url: fullUrl,
+                date: orderDate
+              });
+            }
+          } else {
+            console.log(`No "View Details" link found for order dated ${orderDate.toISOString()}`);
+            continueLoading = false;
+            break;
           }
         }
 
@@ -250,7 +256,8 @@ export class HannafordScraper {
         checkAborted();
 
         // Check cache first
-        let orderItems = this.cache.get(order.url);
+        const orderDateKey = order.date.toISOString().split('T')[0];
+        let orderItems = this.cache.get(orderDateKey);
 
         if (!orderItems) {
           // Navigate to order details page
@@ -281,13 +288,13 @@ export class HannafordScraper {
             };
           })));
 
-          // Cache the results
-          this.cache.set(order.url, orderItems);
+          // Cache the results using the date as key
+          this.cache.set(orderDateKey, orderItems);
 
           // Close the details page
           await detailsPage.close();
         } else {
-          console.log(`Using cached data for order: ${order.url}`);
+          console.log(`Using cached data for order date: ${orderDateKey}`);
         }
 
         // Mark URL as processed
