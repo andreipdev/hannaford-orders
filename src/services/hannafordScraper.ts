@@ -217,9 +217,25 @@ export class HannafordScraper {
           const seeMoreButton = await this.page.$('#see-more-btn');
           if (seeMoreButton) {
             console.log('Found "See More" button, clicking it...');
+            // Get current number of rows
+            const currentRowCount = await this.page.evaluate(() => 
+              document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)').length
+            );
+            
             await seeMoreButton.click();
-            await this.page.waitForTimeout(2000);
-            await this.page.waitForNetworkIdle({ timeout: 30000 });
+            
+            // Wait for row count to increase
+            await this.page.waitForFunction(
+              (previousCount) => {
+                const rows = document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)');
+                return rows.length > previousCount;
+              },
+              { timeout: 30000 },
+              currentRowCount
+            );
+            
+            // Small delay to ensure content is stable
+            await this.page.waitForTimeout(1000);
           } else {
             console.log('No more "See More" button found, finishing collection...');
             continueLoading = false;
