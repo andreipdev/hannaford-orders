@@ -24,39 +24,26 @@ console.log(cacheFiles);
 // Process each cache file
 cacheFiles.forEach(file => {
   try {
-    let filePath = path.join(cacheDir, file);
-    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    // Try to extract date from the cache file name
-    const hash = file.replace('.json', '');
-    filePath = path.join(cacheDir, file);
-    const fileContent = fs.readFileSync(filePath, 'utf8');
+    // The filename itself is the date in ISO format (YYYY-MM-DD)
+    const dateStr = file.replace('.json', '');
+    
+    // Validate that it matches a date format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const date = new Date(dateStr);
+      const year = date.getFullYear().toString();
 
-    try {
-      // Try to parse the content
-      const content = JSON.parse(fileContent);
-
-      // Skip if not an array or empty array
-      if (!Array.isArray(content) || content.length === 0) {
-        return;
+      // Add to yearCaches
+      if (!metadata.yearCaches[year]) {
+        metadata.yearCaches[year] = [];
       }
-
-      // Look for a date pattern in the content
-      const dateMatch = fileContent.match(/\d{4}-\d{2}-\d{2}/);
-      if (dateMatch) {
-        const dateStr = dateMatch[0];
-        const date = new Date(dateStr);
-        const year = date.getFullYear().toString();
-
-        // Add to yearCaches
-        if (!metadata.yearCaches[year]) {
-          metadata.yearCaches[year] = [];
-        }
-        if (!metadata.yearCaches[year].includes(dateStr)) {
-          metadata.yearCaches[year].push(dateStr);
-          console.log(`Added ${dateStr} to year ${year}`);
-        }
+      if (!metadata.yearCaches[year].includes(dateStr)) {
+        metadata.yearCaches[year].push(dateStr);
+        console.log(`Added ${dateStr} to year ${year}`);
       }
+    } else {
+      console.log(`Skipping file ${file} - not a date format`);
+    }
     }
   } catch (error) {
     console.error(`Error processing file ${file}:`, error);
