@@ -19,21 +19,23 @@ const cacheFiles = fs.readdirSync(cacheDir)
   .filter(file => file.endsWith('.json'))
   .filter(file => file !== 'scraper_metadata.json');
 
+console.log(cacheFiles);
+
 // Process each cache file
 cacheFiles.forEach(file => {
   try {
-    const filePath = path.join(cacheDir, file);
+    let filePath = path.join(cacheDir, file);
     const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    
+
     // Try to extract date from the cache file name
     const hash = file.replace('.json', '');
-    const filePath = path.join(cacheDir, file);
+    filePath = path.join(cacheDir, file);
     const fileContent = fs.readFileSync(filePath, 'utf8');
-    
+
     try {
       // Try to parse the content
       const content = JSON.parse(fileContent);
-      
+
       // Skip if not an array or empty array
       if (!Array.isArray(content) || content.length === 0) {
         return;
