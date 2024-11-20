@@ -60,15 +60,6 @@ cacheFiles.forEach(file => {
           }
         }
       }
-
-        // Add to yearCaches
-        if (!metadata.yearCaches[year]) {
-          metadata.yearCaches[year] = [];
-        }
-        if (!metadata.yearCaches[year].includes(dateStr)) {
-          metadata.yearCaches[year].push(dateStr);
-        }
-      }
     }
   } catch (error) {
     console.error(`Error processing file ${file}:`, error);
