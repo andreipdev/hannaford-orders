@@ -172,15 +172,14 @@ export class HannafordScraper {
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-      let hasMoreOrders = true;
-
+      // First, collect all order URLs and dates
+      const ordersList: { url: string; date: Date }[] = [];
       let continueLoading = true;
-      
+
       while (continueLoading) {
-        checkAborted(); // Check for cancellation before each iteration
-        
-        // Wait for orders table to load
-        console.log('Waiting for orders to load...');
+        checkAborted();
+
+        console.log('Waiting for orders table to load...');
         try {
           await this.page.waitForSelector('.store-purchase-table', { timeout: 30000 });
         } catch (error) {
@@ -188,111 +187,108 @@ export class HannafordScraper {
           throw new Error('Could not find orders table - check page structure');
         }
 
-        // Get all order rows
-        const orders = await this.page.$$('.store-purchase-table tbody tr:not(:last-child)');
-        console.log(`Found ${orders.length} orders on current page`);
+        // Get all order rows on current page
+        const newOrders = await this.page.evaluate(() => {
+          const rows = Array.from(document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)'));
+          return rows.map(row => ({
+            date: row.querySelector('.store-date')?.textContent?.trim() || '',
+            url: row.querySelector('.view-details-link')?.getAttribute('href') || ''
+          }));
+        });
 
-        for (const order of orders) {
-          // Get order date and details URL
-          const [dateText, detailsUrl] = await order.evaluate((row: Element) => {
-            const dateCell = row.querySelector('.store-date');
-            const detailsLink = row.querySelector('.view-details-link');
-            return [
-              dateCell?.textContent?.trim() || '',
-              detailsLink?.getAttribute('href') || ''
-            ];
-          });
-
-          const orderDate = new Date(dateText);
-          console.log(`Processing order from ${orderDate.toLocaleDateString()}`);
-
-          // Stop if order is older than a year
+        // Process the collected orders
+        for (const order of newOrders) {
+          const orderDate = new Date(order.date);
           if (orderDate < oneYearAgo) {
-            hasMoreOrders = false;
+            continueLoading = false;
             break;
           }
-
-          // Construct full URL for order details
-          const orderDetailsUrl = new URL(detailsUrl, 'https://www.hannaford.com').href;
-
-          // Check if we've already processed this URL
-          if (this.processedUrls.has(orderDetailsUrl)) {
-            console.log(`Skipping already processed order: ${orderDetailsUrl}`);
-            continue;
-          }
-
-          // Check cache first
-          let orderItems = this.cache.get(orderDetailsUrl);
-
-          if (!orderItems) {
-            // Navigate to order details page
-            const detailsPage = await this.browser.newPage();
-            console.log(`Navigating to order details: ${orderDetailsUrl}`);
-            await detailsPage.goto(orderDetailsUrl, {
-              timeout: 120000
-            });
-
-            // Wait for the items to load
-            await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
-
-            // Extract items from the order
-            const items = await detailsPage.$$('.item-wrapper');
-
-            // Process items and store in cache
-            orderItems = await Promise.all(items.map(item => item.evaluate((el: Element) => {
-              const nameEl = el.querySelector('.productName');
-              const qtyEl = el.querySelector('.qty');
-              const priceEl = el.querySelector('.item-price');
-
-              if (!nameEl || !qtyEl || !priceEl) return null;
-
-              return {
-                name: nameEl.textContent?.trim() || '',
-                price: parseFloat(priceEl.getAttribute('value') || '0'),
-                quantity: parseInt(qtyEl.textContent?.trim() || '0')
-              };
-            })));
-
-            // Cache the results
-            this.cache.set(orderDetailsUrl, orderItems);
-
-            // Close the details page
-            await detailsPage.close();
-          } else {
-            console.log(`Using cached data for order: ${orderDetailsUrl}`);
-          }
-
-          // Mark URL as processed
-          this.processedUrls.add(orderDetailsUrl);
-
-          // Process the items
-          orderItems.forEach(itemData => {
-            if (itemData) {
-              console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
-              purchases.push({
-                item: itemData.name,
-                unitPrice: itemData.price,
-                quantity: itemData.quantity,
-                date: orderDate
-              });
-            }
-          });
-        }
-
-        // Check if there's a "See More" button
-        const seeMoreButton = await this.page.$('#see-more-btn');
-        
-        if (seeMoreButton) {
-          console.log('Found "See More" button, clicking it...');
-          await seeMoreButton.click();
-          await this.page.waitForTimeout(2000); // Wait for new content to load
           
-          // Wait for network activity to settle
-          await this.page.waitForNetworkIdle({ timeout: 30000 });
-        } else {
-          console.log('No more "See More" button found, finishing...');
-          continueLoading = false;
+          const fullUrl = new URL(order.url, 'https://www.hannaford.com').href;
+          if (!this.processedUrls.has(fullUrl)) {
+            ordersList.push({
+              url: fullUrl,
+              date: orderDate
+            });
+          }
         }
+
+        if (continueLoading) {
+          const seeMoreButton = await this.page.$('#see-more-btn');
+          if (seeMoreButton) {
+            console.log('Found "See More" button, clicking it...');
+            await seeMoreButton.click();
+            await this.page.waitForTimeout(2000);
+            await this.page.waitForNetworkIdle({ timeout: 30000 });
+          } else {
+            console.log('No more "See More" button found, finishing collection...');
+            continueLoading = false;
+          }
+        }
+      }
+
+      console.log(`Collected ${ordersList.length} orders to process`);
+
+      // Now process each order
+      for (const order of ordersList) {
+        checkAborted();
+
+        // Check cache first
+        let orderItems = this.cache.get(order.url);
+
+        if (!orderItems) {
+          // Navigate to order details page
+          const detailsPage = await this.browser.newPage();
+          console.log(`Navigating to order details: ${order.url}`);
+          await detailsPage.goto(order.url, {
+            timeout: 120000
+          });
+
+          // Wait for the items to load
+          await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
+
+          // Extract items from the order
+          const items = await detailsPage.$$('.item-wrapper');
+
+          // Process items and store in cache
+          orderItems = await Promise.all(items.map(item => item.evaluate((el: Element) => {
+            const nameEl = el.querySelector('.productName');
+            const qtyEl = el.querySelector('.qty');
+            const priceEl = el.querySelector('.item-price');
+
+            if (!nameEl || !qtyEl || !priceEl) return null;
+
+            return {
+              name: nameEl.textContent?.trim() || '',
+              price: parseFloat(priceEl.getAttribute('value') || '0'),
+              quantity: parseInt(qtyEl.textContent?.trim() || '0')
+            };
+          })));
+
+          // Cache the results
+          this.cache.set(order.url, orderItems);
+
+          // Close the details page
+          await detailsPage.close();
+        } else {
+          console.log(`Using cached data for order: ${order.url}`);
+        }
+
+        // Mark URL as processed
+        this.processedUrls.add(order.url);
+
+        // Process the items
+        orderItems.forEach(itemData => {
+          if (itemData) {
+            console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
+            purchases.push({
+              item: itemData.name,
+              unitPrice: itemData.price,
+              quantity: itemData.quantity,
+              date: order.date
+            });
+          }
+        });
       }
 
       return purchases;
