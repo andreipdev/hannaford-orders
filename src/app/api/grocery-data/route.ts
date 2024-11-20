@@ -3,8 +3,8 @@ import { HannafordScraper } from '../../../services/hannafordScraper'
 
 // Keep mock data for development/testing
 const mockData = [
-  { 
-    item: 'Organic Milk',
+  {
+    item: 'Organic Milk (example data)',
     unitPrice: 4.99,
     timesPurchased: 24,
     monthlyBreakdown: {
@@ -22,8 +22,8 @@ const mockData = [
       'December': 2
     }
   },
-  { 
-    item: 'Orange Juice',
+  {
+    item: 'Orange Juice (example data)',
     unitPrice: 3.99,
     timesPurchased: 18,
     monthlyBreakdown: {
@@ -56,23 +56,23 @@ export async function GET(request: Request) {
   // Check if we have credentials in environment variables
   const username = process.env.HANNAFORD_USERNAME;
   const password = process.env.HANNAFORD_PASSWORD;
-  
+
   // Use mock data if no credentials are provided
   if (!username || !password) {
     console.log('No credentials found, using mock data');
     return NextResponse.json(mockData);
   }
-  
+
   try {
     const scraper = new HannafordScraper(signal);
     await scraper.initialize();
     await scraper.login({ username, password });
-    
+
     const purchases = await scraper.scrapeOrders();
     const processedData = scraper.processOrderData(purchases);
-    
+
     await scraper.close();
-    
+
     return NextResponse.json(processedData);
   } catch (error) {
     console.error('Error fetching Hannaford data:', error);
