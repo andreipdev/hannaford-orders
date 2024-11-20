@@ -79,9 +79,10 @@ export class HannafordScraper {
 
   async login(credentials: HannafordCredentials) {
     try {
+    console.log('Navigating to login page: https://www.hannaford.com/login');
     await this.page.goto('https://www.hannaford.com/login', {
       waitUntil: 'networkidle0',
-      timeout: 60000
+      timeout: 120000
     });
 
     // Wait for page load
@@ -161,9 +162,10 @@ export class HannafordScraper {
         }
       };
     console.log('Navigating to orders page...');
+    console.log('Navigating to orders page: https://www.hannaford.com/account/my-orders/in-store');
     await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
       waitUntil: 'networkidle0',
-      timeout: 60000
+      timeout: 120000
     });
 
     const purchases: PurchaseData[] = [];
@@ -224,7 +226,11 @@ export class HannafordScraper {
         if (!orderItems) {
           // Navigate to order details page
           const detailsPage = await this.browser.newPage();
-          await detailsPage.goto(orderDetailsUrl);
+          console.log(`Navigating to order details: ${orderDetailsUrl}`);
+          await detailsPage.goto(orderDetailsUrl, {
+            waitUntil: 'networkidle0',
+            timeout: 120000
+          });
 
           // Wait for the items to load
           await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
