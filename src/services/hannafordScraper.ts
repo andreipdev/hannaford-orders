@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { CacheService } from './cacheService';
+import { categoryMappings } from '../config/categories';
 
 interface HannafordCredentials {
   username: string;
@@ -412,9 +413,15 @@ export class HannafordScraper {
   }
 
   processOrderData(purchases: PurchaseData[]) {
-    // Helper function to get category name - just returns the item name for now
+    // Helper function to get category name
     const getCategoryName = (itemName: string): string => {
-      return itemName;
+      const upperItem = itemName.toUpperCase();
+      for (const [key, category] of Object.entries(categoryMappings)) {
+        if (upperItem.includes(key)) {
+          return category;
+        }
+      }
+      return "Uncategorized"; // Default category if no match found
     };
 
     // Track minimum prices for categories
