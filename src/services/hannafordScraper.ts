@@ -24,14 +24,17 @@ export class HannafordScraper {
   private page: any;
   private abortSignal: AbortSignal | undefined;
   private cache: CacheService;
-  private metadataCache: CacheService;
+  private readonly metadataFilePath: string = '.cache/scraper_metadata.json';
   private processedUrls: Set<string>;
   private static readonly METADATA_KEY = 'scraper_metadata';
 
   constructor(signal?: AbortSignal) {
     this.abortSignal = signal;
     this.cache = new CacheService();
-    this.metadataCache = new CacheService();
+    // Ensure .cache directory exists
+    if (!require('fs').existsSync('.cache')) {
+      require('fs').mkdirSync('.cache', { recursive: true });
+    }
     this.processedUrls = new Set();
 
     // Ensure cleanup on process termination
@@ -371,15 +374,30 @@ export class HannafordScraper {
   }
 
   private getMetadata(): ScraperMetadata {
-    const metadata = this.metadataCache.get(HannafordScraper.METADATA_KEY) || {
+    try {
+      if (require('fs').existsSync(this.metadataFilePath)) {
+        const data = require('fs').readFileSync(this.metadataFilePath, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.warn('Error reading metadata file:', error);
+    }
+    return {
       lastFetchTimestamp: 0,
       yearCaches: {}
     };
-    return metadata;
   }
 
   private saveMetadata(metadata: ScraperMetadata) {
-    this.metadataCache.set(HannafordScraper.METADATA_KEY, metadata);
+    try {
+      require('fs').writeFileSync(
+        this.metadataFilePath,
+        JSON.stringify(metadata, null, 2),
+        'utf8'
+      );
+    } catch (error) {
+      console.error('Error saving metadata file:', error);
+    }
   }
 
   private shouldRefreshData(): boolean {
