@@ -188,13 +188,17 @@ export class HannafordScraper {
         }
 
         // Get all order rows on current page
-        const newOrders = await this.page.evaluate(() => {
+        let newOrders = await this.page.evaluate(() => {
           const rows = Array.from(document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)'));
+
           return rows.map(row => ({
             date: row.querySelector('.store-date')?.textContent?.trim() || '',
             url: row.querySelector('.view-details-link')?.getAttribute('href') || ''
           }));
         });
+
+        // filter out rows with no date
+        newOrders = newOrders.filter(order => order.date);
 
         // Process the collected orders
         for (const order of newOrders) {
@@ -203,7 +207,7 @@ export class HannafordScraper {
             continueLoading = false;
             break;
           }
-          
+
           if (order.url) {
             const fullUrl = new URL(order.url, 'https://www.hannaford.com').href;
             if (!this.processedUrls.has(fullUrl)) {
@@ -224,12 +228,12 @@ export class HannafordScraper {
           if (seeMoreButton) {
             console.log('Found "See More" button, clicking it...');
             // Get current number of rows
-            const currentRowCount = await this.page.evaluate(() => 
+            const currentRowCount = await this.page.evaluate(() =>
               document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)').length
             );
-            
+
             await seeMoreButton.click();
-            
+
             // Wait for row count to increase
             await this.page.waitForFunction(
               (previousCount) => {
@@ -239,7 +243,7 @@ export class HannafordScraper {
               { timeout: 30000 },
               currentRowCount
             );
-            
+
             // Small delay to ensure content is stable
             await this.page.waitForTimeout(1000);
           } else {
