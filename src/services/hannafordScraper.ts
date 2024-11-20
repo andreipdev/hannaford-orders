@@ -174,20 +174,21 @@ export class HannafordScraper {
 
       let hasMoreOrders = true;
 
-      while (hasMoreOrders) {
+      let continueLoading = true;
+      
+      while (continueLoading) {
         checkAborted(); // Check for cancellation before each iteration
+        
         // Wait for orders table to load
         console.log('Waiting for orders to load...');
         try {
           await this.page.waitForSelector('.store-purchase-table', { timeout: 30000 });
         } catch (error) {
           console.error('Failed to find orders table. Current URL:', await this.page.url());
-          const content = await this.page.content();
-          console.log('Page content:', content);
           throw new Error('Could not find orders table - check page structure');
         }
 
-        // Get all order rows on current page
+        // Get all order rows
         const orders = await this.page.$$('.store-purchase-table tbody tr:not(:last-child)');
         console.log(`Found ${orders.length} orders on current page`);
 
@@ -278,61 +279,19 @@ export class HannafordScraper {
           });
         }
 
-        // Check if there are more orders to load
-        const hasMoreOrdersToFetch = await this.page.evaluate(() => {
-          const paginationData = window.ordersPaginationEventData;
-          return paginationData && paginationData.displaySeeMoreButton;
-        });
-
-        if (hasMoreOrdersToFetch && hasMoreOrders) {
-          console.log('Loading more orders...');
-          try {
-            // Get the current index for the next page
-            const currentIndex = await this.page.evaluate(() => {
-              return window.ordersPaginationEventData?.nextIndex || 0;
-            });
-
-            // Make the AJAX request directly
-            const response = await this.page.evaluate(async (index) => {
-              const response = await fetch('/account/my-orders/in-store', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `ajaxRefresh=true&currentIndex=${index}`
-              });
-              return response.text();
-            }, currentIndex);
-
-            // Update the page content
-            await this.page.evaluate((htmlContent) => {
-              // Create a temporary container and insert the HTML
-              const tempDiv = document.createElement('div');
-              tempDiv.innerHTML = htmlContent;
-
-              // Update the order history wrapper
-              const existingWrapper = document.getElementById('orderHistoryWrapper');
-              const newWrapper = tempDiv.querySelector('#orderHistoryWrapper');
-              if (existingWrapper && newWrapper) {
-                existingWrapper.innerHTML = newWrapper.innerHTML;
-              }
-
-              // Find and evaluate any pagination scripts
-              const scripts = tempDiv.querySelectorAll('script:not([src])');
-              scripts.forEach(script => {
-                if (script.textContent?.includes('ordersPaginationEventData')) {
-                  eval(script.textContent);
-                }
-              });
-            }, response);
-
-            await this.page.waitForTimeout(1000); // Short wait for DOM update
-          } catch (error) {
-            console.error('Failed to load more orders:', error);
-            hasMoreOrders = false;
-          }
+        // Check if there's a "See More" button
+        const seeMoreButton = await this.page.$('#see-more-btn');
+        
+        if (seeMoreButton) {
+          console.log('Found "See More" button, clicking it...');
+          await seeMoreButton.click();
+          await this.page.waitForTimeout(2000); // Wait for new content to load
+          
+          // Wait for network activity to settle
+          await this.page.waitForNetworkIdle({ timeout: 30000 });
         } else {
-          hasMoreOrders = false;
+          console.log('No more "See More" button found, finishing...');
+          continueLoading = false;
         }
       }
 
