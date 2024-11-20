@@ -25,12 +25,24 @@ cacheFiles.forEach(file => {
     const filePath = path.join(cacheDir, file);
     const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     
-    // If the file contains an array (order items), it's likely a date cache
-    if (Array.isArray(content)) {
-      // The file name is the date in YYYY-MM-DD format
-      const urlMatch = file.match(/([0-9]{4}-[0-9]{2}-[0-9]{2})/);
-      if (urlMatch) {
-        const dateStr = urlMatch[1];
+    // Try to extract date from the cache file name
+    const hash = file.replace('.json', '');
+    const filePath = path.join(cacheDir, file);
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    
+    try {
+      // Try to parse the content
+      const content = JSON.parse(fileContent);
+      
+      // Skip if not an array or empty array
+      if (!Array.isArray(content) || content.length === 0) {
+        return;
+      }
+
+      // Look for a date pattern in the content
+      const dateMatch = fileContent.match(/\d{4}-\d{2}-\d{2}/);
+      if (dateMatch) {
+        const dateStr = dateMatch[0];
         const date = new Date(dateStr);
         const year = date.getFullYear().toString();
 
@@ -41,23 +53,6 @@ cacheFiles.forEach(file => {
         if (!metadata.yearCaches[year].includes(dateStr)) {
           metadata.yearCaches[year].push(dateStr);
           console.log(`Added ${dateStr} to year ${year}`);
-        }
-      } else {
-        // Try to extract date from the content itself
-        const firstItem = content[0];
-        if (firstItem && typeof firstItem === 'object' && 'date' in firstItem) {
-          const date = new Date(firstItem.date);
-          const year = date.getFullYear().toString();
-          const dateStr = date.toISOString().split('T')[0];
-
-          // Add to yearCaches
-          if (!metadata.yearCaches[year]) {
-            metadata.yearCaches[year] = [];
-          }
-          if (!metadata.yearCaches[year].includes(dateStr)) {
-            metadata.yearCaches[year].push(dateStr);
-            console.log(`Added ${dateStr} to year ${year} (from content)`);
-          }
         }
       }
     }
