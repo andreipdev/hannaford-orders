@@ -415,9 +415,8 @@ export class HannafordScraper {
   processOrderData(purchases: PurchaseData[]) {
     // Helper function to get category name
     const getCategoryName = (itemName: string): string => {
-      const upperItem = itemName.toUpperCase();
-      for (const [key, category] of Object.entries(categoryMappings)) {
-        if (upperItem.includes(key)) {
+      for (const [category, pattern] of Object.entries(categoryMappings)) {
+        if (pattern.test(itemName)) {
           return category;
         }
       }

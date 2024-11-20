@@ -1,71 +1,29 @@
-export const categoryMappings: { [key: string]: string } = {
-  // Pasta & Rice
-  "BARILLA PASTA": "Pasta & Rice",
-  "RONZONI PASTA": "Pasta & Rice",
-  "RICE": "Pasta & Rice",
-  "MINUTE RICE": "Pasta & Rice",
-
-  // Dairy
-  "MILK": "Dairy",
-  "YOGURT": "Dairy",
-  "CHEESE": "Dairy",
-  "CREAM": "Dairy",
-  "BUTTER": "Dairy",
-
-  // Meat
-  "CHICKEN": "Meat",
-  "BEEF": "Meat",
-  "PORK": "Meat",
-  "TURKEY": "Meat",
-  "FISH": "Meat",
-
-  // Produce
-  "BANANA": "Produce",
-  "APPLE": "Produce",
-  "ORANGE": "Produce",
-  "LETTUCE": "Produce",
-  "TOMATO": "Produce",
-  "POTATO": "Produce",
-  "ONION": "Produce",
-  "CARROT": "Produce",
-
-  // Snacks
-  "CHIPS": "Snacks",
-  "COOKIE": "Snacks",
-  "CRACKERS": "Snacks",
-
-  // Beverages
-  "SODA": "Beverages",
-  "JUICE": "Beverages",
-  "WATER": "Beverages",
-  "COFFEE": "Beverages",
-  "TEA": "Beverages",
-
-  // Canned Goods
-  "SOUP": "Canned Goods",
-  "BEANS": "Canned Goods",
-  "TOMATO SAUCE": "Canned Goods",
-
-  // Breakfast
-  "CEREAL": "Breakfast",
-  "OATMEAL": "Breakfast",
-  "PANCAKE": "Breakfast",
-
-  // Condiments
-  "KETCHUP": "Condiments",
-  "MUSTARD": "Condiments",
-  "MAYONNAISE": "Condiments",
-  "SAUCE": "Condiments",
-
-  // Baking
-  "FLOUR": "Baking",
-  "SUGAR": "Baking",
-  "BAKING": "Baking",
-
-  // Cleaning
-  "DETERGENT": "Cleaning",
-  "CLEANER": "Cleaning",
-  "SOAP": "Cleaning",
-  "PAPER TOWEL": "Cleaning",
-  "TISSUE": "Cleaning"
+export const categoryMappings: { [key: string]: RegExp } = {
+  'Pasta': /(pasta|spaghetti|ziti|penne|rotini|linguine|fettuccine|lasagna|macaroni|rigatoni)/i,
+  'Red Bull': /red bull/i,
+  'LU Ecolier': /lu.?ecolier/i,
+  'Rice': /(rice|jasmine|basmati)/i,
+  'Vinegar': /vinegar/i,
+  'Cider': /cider/i,
+  'Beer': /beer/i,
+  'Steak': /(steak|beef|sirloin|ribeye)/i,
+  'Chicken': /(chicken|poultry)/i,
+  'Hand Soap': /hand.?soap/i,
+  'Potatoes': /(potato|potatoes|yukon|russet)/i,
+  'Pepperoni': /pepperoni/i,
+  'Chocolate Chips': /chocolate.?chips/i,
+  'Carrots': /carrot/i,
+  'Flour': /(flour|all.?purpose)/i,
+  'Donuts': /(donut|doughnut)/i,
+  'Ice Cream': /(ice.?cream|gelato)/i,
+  'Bacon': /bacon/i,
+  'Butter': /(butter|margarine)/i,
+  'Cucumbers': /cucumber/i,
+  'Paper towels': /paper.?towels?/i,
+  'White Bread': /(white.?bread|sandwich.?bread)/i,
+  'Deodorant': /deodorant/i,
+  'Shampoo': /shampoo/i,
+  'Coffee': /(coffee|espresso)/i,
+  'Pizza Dough': /pizza.?dough/i,
+  'Salmon': /(salmon|fish)/i
 };
