@@ -198,18 +198,15 @@ export class HannafordScraper {
 
       // If we need fresh data, proceed with scraping
       console.log('Cache expired or not found, fetching fresh data...');
-        if (this.abortSignal?.aborted) {
-          throw new Error('Operation cancelled');
-        }
-      };
-      console.log('Navigating to orders page...');
+      if (this.abortSignal?.aborted) {
+        throw new Error('Operation cancelled');
+      }
+      
       console.log('Navigating to orders page: https://www.hannaford.com/account/my-orders/in-store');
       await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
         waitUntil: 'networkidle0',
         timeout: 120000
       });
-
-      const purchases: PurchaseData[] = [];
       const oneYearAgo = new Date();
       oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
