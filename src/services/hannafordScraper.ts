@@ -465,7 +465,7 @@ export class HannafordScraper {
         }
       }
 
-      const currentMin = minPrices.get(categoryName) ?? 0;
+      const currentMin = minPrices.get(categoryName) ?? Infinity;
       if (purchase.unitPrice > 0) {  // Only consider non-zero prices for minimum
         minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
       }
@@ -483,7 +483,7 @@ export class HannafordScraper {
       if (!itemMap.has(key)) {
         itemMap.set(key, {
           item: categoryName,
-          unitPrice: minPrices.get(categoryName) ?? purchase.unitPrice,
+          unitPrice: purchase.unitPrice || minPrices.get(categoryName) || 0,
           timesPurchased: 0,
           monthlyBreakdown: {},
           monthlySpent: {},
