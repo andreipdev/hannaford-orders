@@ -308,8 +308,8 @@ export class HannafordScraper {
         checkAborted();
 
         // Check cache first
-        const orderDateKey = order.date.toISOString().split('T')[0];
-        let orderItems = this.cache.get(orderDateKey);
+        const formattedDate = new Date(order.date).toISOString().split('T')[0];
+        let orderItems = this.cache.get(formattedDate);
 
         if (!orderItems) {
           // Navigate to order details page
@@ -340,9 +340,10 @@ export class HannafordScraper {
             };
           })));
 
-          // Cache the results using the date as key and filename
-          this.cache.set(orderDateKey, orderItems, orderDateKey);
-          this.addDateToYearCache(orderDateKey);
+          // Format date consistently for caching
+          const formattedDate = new Date(order.date).toISOString().split('T')[0];
+          this.cache.set(formattedDate, orderItems, formattedDate);
+          this.addDateToYearCache(formattedDate);
 
           // Close the details page
           await detailsPage.close();
