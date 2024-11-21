@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import { CacheService } from './cacheService';
 import { categoryMappings } from '../config/categories';
+import { findDefaultPrice } from '../config/defaultPrices';
 
 interface HannafordCredentials {
   username: string;
@@ -333,9 +334,20 @@ export class HannafordScraper {
 
             if (!nameEl || !qtyEl || !priceEl) return null;
 
+            const name = nameEl.textContent?.trim() || '';
+            let price = parseFloat(priceEl.getAttribute('value') || '0');
+            
+            // If price is 0, try to use default price
+            if (price === 0) {
+              const defaultPrice = findDefaultPrice(name);
+              if (defaultPrice !== null) {
+                price = defaultPrice;
+              }
+            }
+
             return {
-              name: nameEl.textContent?.trim() || '',
-              price: parseFloat(priceEl.getAttribute('value') || '0'),
+              name,
+              price,
               quantity: parseInt(qtyEl.textContent?.trim() || '0')
             };
           })));
