@@ -334,22 +334,9 @@ export class HannafordScraper {
 
             if (!nameEl || !qtyEl || !priceEl) return null;
 
-            const name = nameEl.textContent?.trim() || '';
-            let price = parseFloat(priceEl.getAttribute('value') || '0');
-
-            // If price is 0, try to use default price
-            if (price === 0) {
-              const defaultPrice = findDefaultPrice(name);
-              if (defaultPrice !== null) {
-                price = defaultPrice;
-              } else {
-                console.log(`default price not found for: ${name}`);
-              }
-            }
-
             return {
-              name,
-              price,
+              name: nameEl.textContent?.trim() || '',
+              price: parseFloat(priceEl.getAttribute('value') || '0'),
               quantity: parseInt(qtyEl.textContent?.trim() || '0')
             };
           })));
@@ -464,11 +451,22 @@ export class HannafordScraper {
     // Track minimum prices for categories
     const minPrices = new Map<string, number>();
 
-    // First pass to find minimum prices
+    // First pass to find minimum prices and apply default prices
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
+      
+      // Apply default price if price is 0
+      if (purchase.unitPrice === 0) {
+        const defaultPrice = findDefaultPrice(purchase.item);
+        if (defaultPrice !== null) {
+          purchase.unitPrice = defaultPrice;
+        }
+      }
+      
       const currentMin = minPrices.get(categoryName) ?? Infinity;
-      minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
+      if (purchase.unitPrice > 0) {  // Only consider non-zero prices for minimum
+        minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
+      }
     });
 
     // Group purchases by item and calculate monthly breakdowns
