@@ -1,5 +1,5 @@
 'use client'
-import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react'
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalCloseButton, Table, Thead, Tbody, Tr, Th, Td, Box, Text } from '@chakra-ui/react'
 import { GroceryData } from '../types/groceryTypes'
 
 interface MonthlyBreakdownModalProps {
@@ -34,6 +34,12 @@ export const MonthlyBreakdownModal = ({ isOpen, onClose, selectedItem }: Monthly
               ))}
             </Tbody>
           </Table>
+          {selectedItem?.includedItems && selectedItem.includedItems.length > 0 && (
+            <Box mt={4}>
+              <Text fontWeight="bold" mb={2}>Included Items:</Text>
+              <Text>{selectedItem.includedItems.join(', ')}</Text>
+            </Box>
+          )}
         </ModalBody>
       </ModalContent>
     </Modal>

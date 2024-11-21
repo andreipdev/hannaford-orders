@@ -6,4 +6,5 @@ export interface GroceryData {
   spentPerMonth: number
   monthlyBreakdown: Record<string, number>
   monthlySpent: Record<string, number>
+  includedItems: string[]
 }

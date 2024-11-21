@@ -473,7 +473,8 @@ export class HannafordScraper {
           timesPurchased: 0,
           monthlyBreakdown: {},
           monthlySpent: {},
-          totalSpent: 0
+          totalSpent: 0,
+          includedItems: new Set<string>()
         });
       }
 
@@ -488,6 +489,7 @@ export class HannafordScraper {
       itemData.monthlyBreakdown[month] += purchase.quantity;
       itemData.monthlySpent[month] += purchase.unitPrice * purchase.quantity;
       itemData.totalSpent += purchase.unitPrice * purchase.quantity;
+      itemData.includedItems.add(purchase.item);
     });
 
     // Calculate average spent per month for each item
@@ -499,6 +501,10 @@ export class HannafordScraper {
 
     // Convert to array and sort by spent per month (descending)
     return Array.from(itemMap.values())
+      .map(item => ({
+        ...item,
+        includedItems: Array.from(item.includedItems).sort()
+      }))
       .sort((a, b) => b.spentPerMonth - a.spentPerMonth);
   }
 }
