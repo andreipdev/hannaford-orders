@@ -444,7 +444,7 @@ export class HannafordScraper {
           return category;
         }
       }
-      return "Uncategorized"; // Default category if no match found
+      return itemName; // Default category if no match found
     };
 
     // Track minimum prices for categories
@@ -479,7 +479,7 @@ export class HannafordScraper {
 
       const itemData = itemMap.get(key);
       itemData.timesPurchased += purchase.quantity;
-      
+
       // Track both quantity and actual spending per month
       if (!itemData.monthlyBreakdown[month]) {
         itemData.monthlyBreakdown[month] = 0;
