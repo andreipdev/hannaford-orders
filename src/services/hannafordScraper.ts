@@ -460,6 +460,7 @@ export class HannafordScraper {
     // Group purchases by item and calculate monthly breakdowns
     const itemMap = new Map();
 
+    // First pass: Initialize items and track monthly quantities
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
       const month = purchase.date.toLocaleString('default', { month: 'long' });
@@ -471,28 +472,28 @@ export class HannafordScraper {
           unitPrice: minPrices.get(categoryName) ?? purchase.unitPrice,
           timesPurchased: 0,
           monthlyBreakdown: {},
+          monthlySpent: {},
           totalSpent: 0
         });
       }
 
       const itemData = itemMap.get(key);
       itemData.timesPurchased += purchase.quantity;
-      itemData.monthlyBreakdown[month] = (itemData.monthlyBreakdown[month] || 0) + purchase.quantity;
+      
+      // Track both quantity and actual spending per month
+      if (!itemData.monthlyBreakdown[month]) {
+        itemData.monthlyBreakdown[month] = 0;
+        itemData.monthlySpent[month] = 0;
+      }
+      itemData.monthlyBreakdown[month] += purchase.quantity;
+      itemData.monthlySpent[month] += purchase.unitPrice * purchase.quantity;
       itemData.totalSpent += purchase.unitPrice * purchase.quantity;
     });
 
-    // Calculate monthly spent and average for each item
+    // Calculate average spent per month for each item
     for (const itemData of itemMap.values()) {
-      itemData.monthlySpent = {};
-      let totalMonthlySpent = 0;
-      Object.entries(itemData.monthlyBreakdown).forEach(([month, quantity]) => {
-        const monthSpent = quantity * itemData.unitPrice;
-        itemData.monthlySpent[month] = monthSpent;
-        totalMonthlySpent += monthSpent;
-      });
-      
-      // Calculate average spent per month
-      const numberOfMonths = Object.keys(itemData.monthlyBreakdown).length;
+      const totalMonthlySpent = Object.values(itemData.monthlySpent).reduce((sum: number, spent: number) => sum + spent, 0);
+      const numberOfMonths = Object.keys(itemData.monthlySpent).length;
       itemData.spentPerMonth = numberOfMonths > 0 ? totalMonthlySpent / numberOfMonths : 0;
     }
 
