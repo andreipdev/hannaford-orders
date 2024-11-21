@@ -336,12 +336,14 @@ export class HannafordScraper {
 
             const name = nameEl.textContent?.trim() || '';
             let price = parseFloat(priceEl.getAttribute('value') || '0');
-            
+
             // If price is 0, try to use default price
             if (price === 0) {
               const defaultPrice = findDefaultPrice(name);
               if (defaultPrice !== null) {
                 price = defaultPrice;
+              } else {
+                console.log(`default price not found for: ${name}`);
               }
             }
 
