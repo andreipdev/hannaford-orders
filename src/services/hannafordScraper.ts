@@ -187,7 +187,7 @@ export class HannafordScraper {
       if (!this.shouldRefreshData()) {
         console.log('Using cached data from last 24 hours...');
         const cachedDates = this.getCachedDatesForYear(currentYear);
-        
+
         for (const dateKey of cachedDates) {
           const orderItems = this.cache.get(dateKey);
           if (orderItems) {
@@ -211,7 +211,7 @@ export class HannafordScraper {
       if (this.abortSignal?.aborted) {
         throw new Error('Operation cancelled');
       }
-      
+
       console.log('Navigating to orders page: https://www.hannaford.com/account/my-orders/in-store');
       await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
         waitUntil: 'networkidle0',
@@ -416,11 +416,11 @@ export class HannafordScraper {
   private addDateToYearCache(date: string) {
     const year = date.split('-')[0];
     const metadata = this.getMetadata();
-    
+
     if (!metadata.yearCaches[year]) {
       metadata.yearCaches[year] = [];
     }
-    
+
     if (!metadata.yearCaches[year].includes(date)) {
       metadata.yearCaches[year].push(date);
       this.saveMetadata(metadata);
