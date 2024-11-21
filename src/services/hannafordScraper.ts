@@ -454,16 +454,18 @@ export class HannafordScraper {
     // First pass to find minimum prices and apply default prices
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
-      
+
       // Apply default price if price is 0
       if (purchase.unitPrice === 0) {
         const defaultPrice = findDefaultPrice(purchase.item);
         if (defaultPrice !== null) {
           purchase.unitPrice = defaultPrice;
+        } else {
+          console.warn(`No default price found for item: ${purchase.item}`);
         }
       }
-      
-      const currentMin = minPrices.get(categoryName) ?? Infinity;
+
+      const currentMin = minPrices.get(categoryName) ?? 0;
       if (purchase.unitPrice > 0) {  // Only consider non-zero prices for minimum
         minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
       }
