@@ -481,14 +481,23 @@ export class HannafordScraper {
       itemData.totalSpent += purchase.unitPrice * purchase.quantity;
     });
 
-    // Calculate monthly spent for each item
+    // Calculate monthly spent and average for each item
     for (const itemData of itemMap.values()) {
       itemData.monthlySpent = {};
+      let totalMonthlySpent = 0;
       Object.entries(itemData.monthlyBreakdown).forEach(([month, quantity]) => {
-        itemData.monthlySpent[month] = quantity * itemData.unitPrice;
+        const monthSpent = quantity * itemData.unitPrice;
+        itemData.monthlySpent[month] = monthSpent;
+        totalMonthlySpent += monthSpent;
       });
+      
+      // Calculate average spent per month
+      const numberOfMonths = Object.keys(itemData.monthlyBreakdown).length;
+      itemData.spentPerMonth = numberOfMonths > 0 ? totalMonthlySpent / numberOfMonths : 0;
     }
 
-    return Array.from(itemMap.values());
+    // Convert to array and sort by total spent (descending)
+    return Array.from(itemMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent);
   }
 }
