@@ -496,8 +496,8 @@ export class HannafordScraper {
       itemData.spentPerMonth = numberOfMonths > 0 ? totalMonthlySpent / numberOfMonths : 0;
     }
 
-    // Convert to array and sort by total spent (descending)
+    // Convert to array and sort by spent per month (descending)
     return Array.from(itemMap.values())
-      .sort((a, b) => b.totalSpent - a.totalSpent);
+      .sort((a, b) => b.spentPerMonth - a.spentPerMonth);
   }
 }
