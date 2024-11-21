@@ -341,7 +341,7 @@ export class HannafordScraper {
           })));
 
           const orderDateKey = order.date.toISOString().split('T')[0];
-          this.cache.set(orderDateKey, orderItems, orderDateKey);
+          this.cache.set(orderDateKey, orderItems);
           this.addDateToYearCache(orderDateKey);
 
           // Close the details page
