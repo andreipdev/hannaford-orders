@@ -1,6 +1,10 @@
 export interface GroceryData {
   item: string
-  unitPrice: number
+  unitPrice: number  // Keep for compatibility
+  priceRange: {
+    min: number
+    max: number
+  }
   timesPurchased: number
   totalSpent: number
   spentPerMonth: number

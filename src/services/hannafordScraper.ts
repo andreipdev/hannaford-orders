@@ -448,8 +448,8 @@ export class HannafordScraper {
       return itemName; // Default category if no match found
     };
 
-    // Track minimum prices for categories
-    const minPrices = new Map<string, number>();
+    // Track price ranges for categories
+    const priceRanges = new Map<string, { min: number; max: number }>();
 
     // First pass to find minimum prices and apply default prices
     purchases.forEach(purchase => {
@@ -465,9 +465,12 @@ export class HannafordScraper {
         }
       }
 
-      const currentMin = minPrices.get(categoryName) ?? Infinity;
-      if (purchase.unitPrice > 0) {  // Only consider non-zero prices for minimum
-        minPrices.set(categoryName, Math.min(currentMin, purchase.unitPrice));
+      if (purchase.unitPrice > 0) {  // Only consider non-zero prices
+        const current = priceRanges.get(categoryName) ?? { min: Infinity, max: -Infinity };
+        priceRanges.set(categoryName, {
+          min: Math.min(current.min, purchase.unitPrice),
+          max: Math.max(current.max, purchase.unitPrice)
+        });
       }
     });
 
@@ -483,7 +486,8 @@ export class HannafordScraper {
       if (!itemMap.has(key)) {
         itemMap.set(key, {
           item: categoryName,
-          unitPrice: purchase.unitPrice || minPrices.get(categoryName) || 0,
+          unitPrice: purchase.unitPrice || (priceRanges.get(categoryName)?.min || 0),
+          priceRange: priceRanges.get(categoryName) || { min: 0, max: 0 },
           timesPurchased: 0,
           monthlyBreakdown: {},
           monthlySpent: {},
