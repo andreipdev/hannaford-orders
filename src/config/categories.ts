@@ -32,7 +32,7 @@ export const categoryMappings: { [key: string]: RegExp } = {
   'Goldfish': /(goldfish)/i,
   'Whipped Creme': /(whipped?.creme)/i,
   'Trash Bags': /(tall?.kitchen|leaf?.bags|trash?.bags)/i,
-  'Cookies': /(chocolate?.chip?.cookies|oreo|sugar?.cookies|chocolate?.cookies|pepperidge?.farm)/i,
+  'Cookies': /(chocolate?.chip?.cookies|oreo|sugar?.cookies|chocolate?.cookies|pepperidge?.farm|cookies)/i,
   'Grated Cheese & Parmesan': /(cabot?.shredded|kraft?.grated?.parmesan|cheddar?.shredded?.cheese|kraft?.finely?.shredded)/i,
   'Ramen': /ramen?.noodles/i,
   'Eggs': /eggs/i,
