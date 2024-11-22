@@ -1,7 +1,7 @@
 import { categoryMappings } from './categories';
 
 export const topCategoryMappings: { [key: string]: string[] } = {
-  'Meat': ['Ground Beef', 'Hot Dogs', 'Chicken', 'Pepperoni', 'Bacon', 'Salmon', 'Ground Turkey', 'Steak', 'Pork'],
+  'Meat/Sides': ['Ground Beef', 'Hot Dogs', 'Chicken', 'Pepperoni', 'Bacon', 'Salmon', 'Ground Turkey', 'Steak', 'Pork', 'Tofu', 'Starkist'],
   'Dairy & Eggs': ['Eggs', 'Butter', 'Grated Cheese & Parmesan', 'Whole Cheese', 'Whipping Cream/Heavy Cream', 'Sour Cream'],
   'Pantry': ['Pasta', 'Rice', 'Vinegar', 'Chocolate Chips', 'Couscous', 'Baking (flour, sugar,...)', 'Oil', 'Salt', 'Beans', 'Stock & Broth', 'Tomato Sauce', 'Spices/Sauces'],
   'Snacks & Sweets': ['LU Ecolier', 'Donuts', 'Ice Cream', 'Chocolate Candies', 'Goldfish', 'Cookies', 'Marshmallows', 'Chips', 'Nutella Crackers', 'Nutella', 'Cereal Bars', 'Other Snacks', 'Cereal', 'Pudding'],
