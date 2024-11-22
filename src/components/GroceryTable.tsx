@@ -12,26 +12,17 @@ import { categoryMappings } from '../config/categories'
 import { topCategoryMappings, getTopCategory } from '../config/topCategories'
 
 export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTableProps) => {
-  const getCategoryForItem = (itemName: string): string => {
-    for (const [category, pattern] of Object.entries(categoryMappings)) {
-      if (pattern.test(itemName)) {
-        return category;
-      }
-    }
-    return 'Other';
-  };
-
-
   const organizeDataByTopCategory = () => {
-    const organized: { [category: string]: GroceryData[] } = {};
+    const organized: { [topCategory: string]: GroceryData[] } = {};
     
     groceryData.forEach(item => {
-      const category = getCategoryForItem(item.item);
+      const category = item.category;
+      const topCategory = getTopCategory(category);
       
-      if (!organized[category]) {
-        organized[category] = [];
+      if (!organized[topCategory]) {
+        organized[topCategory] = [];
       }
-      organized[category].push(item);
+      organized[topCategory].push(item);
     });
 
     // Map categories to top categories
