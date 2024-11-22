@@ -1,4 +1,5 @@
 'use client'
+import { Fragment } from 'react'
 import { Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react'
 import { GroceryData } from '../types/groceryTypes'
 
@@ -26,18 +27,6 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     });
 
     return organized;
-
-    // Map categories to top categories
-    const topCategoryData: { [topCategory: string]: GroceryData[] } = {};
-    for (const [category, items] of Object.entries(organized)) {
-      const topCategory = getTopCategory(category);
-      if (!topCategoryData[topCategory]) {
-        topCategoryData[topCategory] = [];
-      }
-      topCategoryData[topCategory].push(...items);
-    }
-
-    return topCategoryData;
   };
 
   const renderTable = () => {
@@ -98,8 +87,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
         </Thead>
         <Tbody>
           {topCategoryTotals.map(({ topCategory, totalSpent, spentPerMonth }) => (
-            <>
-              <Tr key={topCategory} bg="gray.50">
+            <Fragment key={topCategory}>
+              < Tr bg="gray.50" >
                 <Td colSpan={3} fontWeight="bold">{topCategory}</Td>
                 <Td isNumeric fontWeight="bold">${totalSpent.toFixed(2)}</Td>
                 <Td isNumeric fontWeight="bold">${spentPerMonth.toFixed(2)}</Td>
@@ -118,10 +107,11 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
                   <Td isNumeric>${item.spentPerMonth.toFixed(2)}</Td>
                 </Tr>
               ))}
-            </>
-          ))}
-        </Tbody>
-      </Table>
+            </Fragment>
+          ))
+          }
+        </Tbody >
+      </Table >
     );
   };
 

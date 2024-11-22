@@ -1,5 +1,6 @@
 export interface GroceryData {
   item: string
+  category: string
   unitPrice: number  // Keep for compatibility
   priceRange: {
     min: number

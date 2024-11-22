@@ -69,15 +69,7 @@ export async function GET(request: Request) {
     await scraper.login({ username, password });
 
     const purchases = await scraper.scrapeOrders();
-    const processedData = scraper.processOrderData(purchases).map((item) => {
-      const category = getCategoryForItem(item.item);
-      const topCategory = getTopCategory(category);
-      return {
-        ...item,
-        category,
-        topCategory,
-      };
-    });
+    const processedData = scraper.processOrderData(purchases);
 
     await scraper.close();
 

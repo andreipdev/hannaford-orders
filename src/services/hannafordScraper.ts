@@ -486,6 +486,7 @@ export class HannafordScraper {
       if (!itemMap.has(key)) {
         itemMap.set(key, {
           item: categoryName,
+          category: categoryName,
           unitPrice: purchase.unitPrice || (priceRanges.get(categoryName)?.min || 0),
           priceRange: priceRanges.get(categoryName) || { min: 0, max: 0 },
           timesPurchased: 0,
