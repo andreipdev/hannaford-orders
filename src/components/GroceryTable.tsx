@@ -51,7 +51,6 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     return organized;
   };
 
-  const renderRegularTable = (data: GroceryData[]) => (
   const renderTable = () => {
     if (viewMode === 'all') {
       return renderRegularTable(groceryData);
@@ -99,6 +98,5 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     );
   };
 
-  return renderTable()
-  )
-}
+  return renderTable();
+};
