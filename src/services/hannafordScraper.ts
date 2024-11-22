@@ -57,61 +57,33 @@ export class HannafordScraper {
         timeout: 120000
       });
 
-      // Wait for the main coupon container
-      console.log('Waiting for coupon container to load...');
-      await this.page.waitForSelector('.coupon-gallery', { timeout: 30000 });
-
-      // Handle any potential popups
-      try {
-        const popupClose = await this.page.$('.modal-close');
-        if (popupClose) {
-          console.log('Closing popup dialog...');
-          await popupClose.click();
-          await this.page.waitForTimeout(1000);
-        }
-      } catch (e) {
-        console.log('No popup found, continuing...');
-      }
-
-      // Wait for the actual coupon elements with a more specific selector
+      // Wait for coupons to load
       console.log('Waiting for coupons to load...');
-      await this.page.waitForSelector('button[data-testid="clip-button"]:not([disabled])', {
-        timeout: 30000
-      });
+      await this.page.waitForSelector('.clip-coupon', { timeout: 30000 });
 
       // Get all unclipped coupon buttons
-      const clipButtons = await this.page.$$('button[data-testid="clip-button"]:not([disabled])');
+      const clipButtons = await this.page.$$('.clip-coupon:not(.clipped)');
       console.log(`Found ${clipButtons.length} unclipped coupons`);
 
-      // Clip each coupon with proper waiting and verification
+      // Clip each coupon
       for (let i = 0; i < clipButtons.length; i++) {
         try {
           const button = clipButtons[i];
           
-          // Get coupon details for logging
-          const couponName = await this.page.evaluate(el => {
-            const container = el.closest('.coupon-item');
-            return container ? container.querySelector('.coupon-description')?.textContent || 'Unknown Coupon' : 'Unknown Coupon';
-          }, button);
-
-          console.log(`Clipping coupon ${i + 1}/${clipButtons.length}: ${couponName}`);
-
           // Scroll button into view
           await this.page.evaluate(el => {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           }, button);
-          await this.page.waitForTimeout(500);
+          await this.page.waitForTimeout(1000);
 
           // Click the button
           await button.click();
+          console.log(`Clipped coupon ${i + 1}/${clipButtons.length}`);
           
-          // Wait for the clip action to complete
-          await this.page.waitForTimeout(1000);
-
-          console.log(`Successfully clipped coupon: ${couponName}`);
+          // Wait between clips
+          await this.page.waitForTimeout(2000);
         } catch (error) {
           console.error(`Failed to clip coupon ${i + 1}:`, error);
-          // Continue with next coupon even if one fails
           continue;
         }
       }
