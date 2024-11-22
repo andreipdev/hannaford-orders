@@ -27,15 +27,24 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     
     groceryData.forEach(item => {
       const category = getCategoryForItem(item.item);
-      const topCategory = getTopCategory(category);
       
-      if (!organized[topCategory]) {
-        organized[topCategory] = [];
+      if (!organized[category]) {
+        organized[category] = [];
       }
-      organized[topCategory].push(item);
+      organized[category].push(item);
     });
 
-    return organized;
+    // Map categories to top categories
+    const topCategoryData: { [topCategory: string]: GroceryData[] } = {};
+    for (const [category, items] of Object.entries(organized)) {
+      const topCategory = getTopCategory(category);
+      if (!topCategoryData[topCategory]) {
+        topCategoryData[topCategory] = [];
+      }
+      topCategoryData[topCategory].push(...items);
+    }
+
+    return topCategoryData;
   };
 
   const renderTable = () => {
