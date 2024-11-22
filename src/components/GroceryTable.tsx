@@ -103,7 +103,6 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
                 <Td isNumeric fontWeight="bold">${spentPerMonth.toFixed(2)}</Td>
               </Tr>
               {organizedData[topCategory].map((item) => (
-              {items.map((item) => (
                 <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                   <Td pl={8}>{item.item}</Td>
                   <Td isNumeric>
