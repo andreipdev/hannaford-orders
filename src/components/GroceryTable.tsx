@@ -14,16 +14,18 @@ import { topCategoryMappings, getTopCategory } from '../config/topCategories'
 export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTableProps) => {
   const organizeDataByTopCategory = () => {
     const organized: { [topCategory: string]: GroceryData[] } = {};
-    
+
     groceryData.forEach(item => {
       const category = item.category;
       const topCategory = getTopCategory(category);
-      
+
       if (!organized[topCategory]) {
         organized[topCategory] = [];
       }
       organized[topCategory].push(item);
     });
+
+    return organized;
 
     // Map categories to top categories
     const topCategoryData: { [topCategory: string]: GroceryData[] } = {};
@@ -56,8 +58,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
               <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                 <Td>{item.item}</Td>
                 <Td isNumeric>
-                  {item.priceRange.min === item.priceRange.max ? 
-                    `$${item.priceRange.min.toFixed(2)}` : 
+                  {item.priceRange.min === item.priceRange.max ?
+                    `$${item.priceRange.min.toFixed(2)}` :
                     `$${item.priceRange.min.toFixed(2)}-$${item.priceRange.max.toFixed(2)}`
                   }
                 </Td>
@@ -106,8 +108,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
                 <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                   <Td pl={8}>{item.item}</Td>
                   <Td isNumeric>
-                    {item.priceRange.min === item.priceRange.max ? 
-                      `$${item.priceRange.min.toFixed(2)}` : 
+                    {item.priceRange.min === item.priceRange.max ?
+                      `$${item.priceRange.min.toFixed(2)}` :
                       `$${item.priceRange.min.toFixed(2)}-$${item.priceRange.max.toFixed(2)}`
                     }
                   </Td>
