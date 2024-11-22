@@ -10,7 +10,7 @@ export const topCategoryMappings: { [key: string]: string[] } = {
   'Fresh Produce': ['Vegetables', 'Fruits'],
   'Bread & Bakery': ['White Bread', 'Baguette', 'Naan', 'Crescents'],
   'Household': ['Hand Soap', 'Paper towels', 'Trash Bags', 'Clothes Washing', 'Toilet Paper', 'Spray Cleaners', 'Foil & Parchment', 'Dishwashing', 'Tissues', 'Other Cleaning Products', 'Ziploc'],
-  'Personal Care': ['Deodorant', 'Shampoo & Conditioner', 'Body Wash', 'Dental', 'Hair Gel'],
+  'Personal Care': ['Deodorant', 'Shampoo & Conditioner', 'Body Wash', 'Dental', 'Hair Gel', 'Medecin/Vitamins'],
   'International': ['Pilmeni', 'Samosa', 'Ramen', 'Tacos & Tortillas'],
   'Other': [] // Will contain any categories not explicitly mapped above
 };
