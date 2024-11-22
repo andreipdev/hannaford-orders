@@ -17,20 +17,13 @@ export default function Home() {
 
     const fetchData = async () => {
       if (hasLoaded) return;
-      
+
       setIsLoading(true);
       try {
         const response = await fetch('/api/grocery-data', {
           signal: controller.signal,
           headers: {
             'Connection': 'keep-alive'
-          }
-
-          const handleClipCoupons = async () => {
-            const response = await fetch('/api/clip-coupons', { method: 'POST' });
-            if (!response.ok) {
-              console.error('Error clipping coupons:', await response.text());
-            }
           }
         });
         const data = await response.json();
@@ -54,9 +47,11 @@ export default function Home() {
     };
   }, [hasLoaded]);
 
-  const handleClipCoupons = () => {
-    console.log('Clipping all coupons...')
-    // Add coupon clipping logic here
+  const handleClipCoupons = async () => {
+    const response = await fetch('/api/clip-coupons', { method: 'POST' });
+    if (!response.ok) {
+      console.error('Error clipping coupons:', await response.text());
+    }
   }
 
   return (
@@ -78,25 +73,25 @@ export default function Home() {
           <TabPanels>
             <TabPanel p={0} pt={4}>
               <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
-                <GroceryTable 
+                <GroceryTable
                   groceryData={groceryData}
                   viewMode="topCategories"
                   onItemClick={(item) => {
                     setSelectedItem(item)
                     onOpen()
-                  }} 
+                  }}
                 />
               </Box>
             </TabPanel>
             <TabPanel p={0} pt={4}>
               <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
-                <GroceryTable 
+                <GroceryTable
                   groceryData={groceryData}
                   viewMode="all"
                   onItemClick={(item) => {
                     setSelectedItem(item)
                     onOpen()
-                  }} 
+                  }}
                 />
               </Box>
             </TabPanel>
@@ -104,9 +99,9 @@ export default function Home() {
         </Tabs>
       </Flex>
 
-      <MonthlyBreakdownModal 
-        isOpen={isOpen} 
-        onClose={onClose} 
+      <MonthlyBreakdownModal
+        isOpen={isOpen}
+        onClose={onClose}
         selectedItem={selectedItem}
       />
     </Container>

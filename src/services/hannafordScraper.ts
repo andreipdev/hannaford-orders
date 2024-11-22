@@ -61,10 +61,11 @@ export class HannafordScraper {
       await this.page.waitForSelector('.clipTarget', { timeout: 30000 });
 
       // Get all clip target elements
-      const clipTargets = await this.page.$$('.clipTarget');
+      const clipTargets = await this.page.$$('a.clipTarget');
 
       // Clip each coupon with a delay between each click
       for (const clipTarget of clipTargets) {
+        console.log('clipping coupon');
         await clipTarget.click();
         await this.page.waitForTimeout(200);
       }
