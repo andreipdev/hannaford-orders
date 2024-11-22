@@ -59,29 +59,49 @@ export class HannafordScraper {
 
       // Wait for coupons to load
       console.log('Waiting for coupons to load...');
-      await this.page.waitForSelector('.clip-coupon', { timeout: 30000 });
+      await this.page.waitForSelector('.couponTile', { timeout: 30000 });
 
-      // Get all unclipped coupon buttons
-      const clipButtons = await this.page.$$('.clip-coupon:not(.clipped)');
-      console.log(`Found ${clipButtons.length} unclipped coupons`);
+      // Get all unclipped coupon tiles
+      const unclippedCoupons = await this.page.$$('.couponTile.available');
+      console.log(`Found ${unclippedCoupons.length} unclipped coupons`);
 
       // Clip each coupon
-      for (let i = 0; i < clipButtons.length; i++) {
+      for (let i = 0; i < unclippedCoupons.length; i++) {
         try {
-          const button = clipButtons[i];
+          const couponTile = unclippedCoupons[i];
           
-          // Scroll button into view
+          // Get coupon details for logging
+          const brandName = await couponTile.$eval('.brand', el => el.textContent);
+          const savings = await couponTile.$eval('.summary', el => el.textContent);
+          
+          // Scroll tile into view
           await this.page.evaluate(el => {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, button);
+          }, couponTile);
           await this.page.waitForTimeout(1000);
 
-          // Click the button
-          await button.click();
-          console.log(`Clipped coupon ${i + 1}/${clipButtons.length}`);
+          // Find and click the clip button within this tile
+          const clipButton = await couponTile.$('.clipTarget');
+          if (!clipButton) {
+            console.warn(`No clip button found for coupon: ${brandName}`);
+            continue;
+          }
+
+          await clipButton.click();
+          console.log(`Clipped coupon ${i + 1}/${unclippedCoupons.length}: ${brandName} - ${savings}`);
           
-          // Wait between clips
+          // Wait between clips to avoid rate limiting
           await this.page.waitForTimeout(2000);
+
+          // Verify the coupon was clipped
+          const wasClipped = await this.page.evaluate(tile => {
+            return tile.classList.contains('clipped');
+          }, couponTile);
+
+          if (!wasClipped) {
+            console.warn(`Coupon may not have been clipped successfully: ${brandName}`);
+          }
+
         } catch (error) {
           console.error(`Failed to clip coupon ${i + 1}:`, error);
           continue;
