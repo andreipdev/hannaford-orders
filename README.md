@@ -1,6 +1,14 @@
 # Hannaford Shopping List Manager
 
-⚠️ **WARNING: This project is currently a work in progress and is not functional in its current state** ⚠️
+This application helps manage shopping lists for Hannaford supermarket, allowing users to access their Hannaford account data programmatically.
+
+## Features
+
+- Securely store Hannaford account credentials locally
+- Fetch and display Hannaford shopping list data
+- Categorize and analyze shopping list items
+- View monthly breakdowns of spending by category
+- Customize category mappings and default prices
 
 ## Overview
 This application is designed to help manage shopping lists for Hannaford supermarket, allowing users to access their Hannaford account data programmatically.
@@ -33,7 +41,7 @@ This will prompt you for your Hannaford username and password, which will be sto
 Your credentials are stored locally in `.env.local` and are only used to authenticate with Hannaford's services. Never commit this file to version control.
 
 ## Development Status
-This project is currently under active development. Many features are not yet implemented or may not work as expected. Please check back later for updates.
+This project is under active development but is functional in its current state. Some planned features may not yet be implemented. Please check back for updates and feel free to contribute!
 
 ## Contributing
 As this is a work in progress, contributions are welcome. Please feel free to submit issues and pull requests.
