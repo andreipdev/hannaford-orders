@@ -53,7 +53,35 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
 
   const renderTable = () => {
     if (viewMode === 'all') {
-      return renderRegularTable(groceryData);
+      return (
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Item</Th>
+              <Th isNumeric>Unit Price</Th>
+              <Th isNumeric>Times Purchased</Th>
+              <Th isNumeric>Total Spent</Th>
+              <Th isNumeric>Spent per Month</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {groceryData.map((item) => (
+              <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
+                <Td>{item.item}</Td>
+                <Td isNumeric>
+                  {item.priceRange.min === item.priceRange.max ? 
+                    `$${item.priceRange.min.toFixed(2)}` : 
+                    `$${item.priceRange.min.toFixed(2)}-$${item.priceRange.max.toFixed(2)}`
+                  }
+                </Td>
+                <Td isNumeric>{item.timesPurchased}</Td>
+                <Td isNumeric>${item.totalSpent.toFixed(2)}</Td>
+                <Td isNumeric>${item.spentPerMonth.toFixed(2)}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      );
     }
 
     const organizedData = viewMode === 'categorized' 
