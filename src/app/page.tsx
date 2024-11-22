@@ -25,6 +25,13 @@ export default function Home() {
           headers: {
             'Connection': 'keep-alive'
           }
+
+          const handleClipCoupons = async () => {
+            const response = await fetch('/api/clip-coupons', { method: 'POST' });
+            if (!response.ok) {
+              console.error('Error clipping coupons:', await response.text());
+            }
+          }
         });
         const data = await response.json();
         setGroceryData(data);

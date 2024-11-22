@@ -49,6 +49,33 @@ export class HannafordScraper {
     });
   }
 
+  async clipCoupons() {
+    try {
+      console.log('Navigating to coupons page: https://www.hannaford.com/coupons');
+      await this.page.goto('https://www.hannaford.com/coupons', {
+        waitUntil: 'networkidle0',
+        timeout: 120000
+      });
+
+      // Wait for the clip targets to load
+      await this.page.waitForSelector('.clipTarget', { timeout: 30000 });
+
+      // Get all clip target elements
+      const clipTargets = await this.page.$$('.clipTarget');
+
+      // Clip each coupon with a delay between each click
+      for (const clipTarget of clipTargets) {
+        await clipTarget.click();
+        await this.page.waitForTimeout(200);
+      }
+
+      console.log('Finished clipping coupons');
+    } catch (error) {
+      console.error('Error clipping coupons:', error);
+      throw error;
+    }
+  }
+
   private async cleanup() {
     console.log('Cleaning up Puppeteer resources...');
     if (this.page) {
