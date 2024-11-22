@@ -1,5 +1,5 @@
 'use client'
-import { Box, Button, Container, Heading, Flex, useDisclosure } from '@chakra-ui/react'
+import { Box, Button, Container, Heading, Flex, useDisclosure, Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import { GroceryTable } from '../components/GroceryTable'
 import { MonthlyBreakdownModal } from '../components/MonthlyBreakdownModal'
@@ -54,14 +54,24 @@ export default function Home() {
 
   return (
     <Container maxW="container.xl" py={5}>
-      <Flex justifyContent="space-between" alignItems="center" mb={6}>
-        <Heading size="lg">Most Purchased Items</Heading>
-        <Button colorScheme="blue" onClick={handleClipCoupons}>
-          Clip all coupons
-        </Button>
-      </Flex>
+      <Flex direction="column" gap={6}>
+        <Flex justifyContent="space-between" alignItems="center">
+          <Heading size="lg">Most Purchased Items</Heading>
+          <Button colorScheme="blue" onClick={handleClipCoupons}>
+            Clip all coupons
+          </Button>
+        </Flex>
 
-      <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
+        <Tabs variant="enclosed">
+          <TabList>
+            <Tab>Categorized</Tab>
+            <Tab>Top Categories</Tab>
+            <Tab>All Items</Tab>
+          </TabList>
+
+          <TabPanels>
+            <TabPanel p={0} pt={4}>
+              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
         {isLoading && (
           <Flex 
             position="absolute" 
@@ -77,14 +87,43 @@ export default function Home() {
             <Button isLoading loadingText="Loading data..." variant="ghost" />
           </Flex>
         )}
-        <GroceryTable 
-          groceryData={groceryData} 
-          onItemClick={(item) => {
-            setSelectedItem(item)
-            onOpen()
-          }} 
-        />
-      </Box>
+                <GroceryTable 
+                  groceryData={groceryData}
+                  viewMode="categorized"
+                  onItemClick={(item) => {
+                    setSelectedItem(item)
+                    onOpen()
+                  }} 
+                />
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} pt={4}>
+              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
+                <GroceryTable 
+                  groceryData={groceryData}
+                  viewMode="topCategories"
+                  onItemClick={(item) => {
+                    setSelectedItem(item)
+                    onOpen()
+                  }} 
+                />
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} pt={4}>
+              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
+                <GroceryTable 
+                  groceryData={groceryData}
+                  viewMode="all"
+                  onItemClick={(item) => {
+                    setSelectedItem(item)
+                    onOpen()
+                  }} 
+                />
+              </Box>
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Flex>
 
       <MonthlyBreakdownModal 
         isOpen={isOpen} 
