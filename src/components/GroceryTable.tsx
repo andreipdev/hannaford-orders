@@ -4,7 +4,7 @@ import { GroceryData } from '../types/groceryTypes'
 
 interface GroceryTableProps {
   groceryData: GroceryData[]
-  viewMode: 'categorized' | 'topCategories' | 'all'
+  viewMode: 'topCategories' | 'all'
   onItemClick: (item: GroceryData) => void
 }
 
@@ -21,19 +21,6 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     return 'Other';
   };
 
-  const organizeDataByCategory = () => {
-    const organized: { [category: string]: GroceryData[] } = {};
-    
-    groceryData.forEach(item => {
-      const category = getCategoryForItem(item.item);
-      if (!organized[category]) {
-        organized[category] = [];
-      }
-      organized[category].push(item);
-    });
-
-    return organized;
-  };
 
   const organizeDataByTopCategory = () => {
     const organized: { [category: string]: GroceryData[] } = {};
@@ -84,9 +71,17 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
       );
     }
 
-    const organizedData = viewMode === 'categorized' 
-      ? organizeDataByCategory()
-      : organizeDataByTopCategory();
+    const organizedData = organizeDataByTopCategory();
+
+    // Calculate total spent and spent per month for each top category
+    const topCategoryTotals = Object.entries(organizedData).map(([topCategory, items]) => {
+      const totalSpent = items.reduce((total, item) => total + item.totalSpent, 0);
+      const spentPerMonth = items.reduce((total, item) => total + item.spentPerMonth, 0);
+      return { topCategory, totalSpent, spentPerMonth };
+    });
+
+    // Sort top categories by total spent descending
+    topCategoryTotals.sort((a, b) => b.totalSpent - a.totalSpent);
 
     return (
       <Table variant="simple">
@@ -100,11 +95,14 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
           </Tr>
         </Thead>
         <Tbody>
-          {Object.entries(organizedData).map(([category, items]) => (
+          {topCategoryTotals.map(({ topCategory, totalSpent, spentPerMonth }) => (
             <>
-              <Tr key={category} bg="gray.50">
-                <Td colSpan={5} fontWeight="bold">{category}</Td>
+              <Tr key={topCategory} bg="gray.50">
+                <Td colSpan={3} fontWeight="bold">{topCategory}</Td>
+                <Td isNumeric fontWeight="bold">${totalSpent.toFixed(2)}</Td>
+                <Td isNumeric fontWeight="bold">${spentPerMonth.toFixed(2)}</Td>
               </Tr>
+              {organizedData[topCategory].map((item) => (
               {items.map((item) => (
                 <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                   <Td pl={8}>{item.item}</Td>
