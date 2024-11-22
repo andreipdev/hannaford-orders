@@ -82,8 +82,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
       return { topCategory, totalSpent, spentPerMonth };
     });
 
-    // Sort top categories by total spent descending
-    topCategoryTotals.sort((a, b) => b.totalSpent - a.totalSpent);
+    // Sort top categories by spent per month descending
+    topCategoryTotals.sort((a, b) => b.spentPerMonth - a.spentPerMonth);
 
     return (
       <Table variant="simple">
