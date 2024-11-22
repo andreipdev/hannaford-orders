@@ -64,39 +64,11 @@ export default function Home() {
 
         <Tabs variant="enclosed">
           <TabList>
-            <Tab>Categorized</Tab>
             <Tab>Top Categories</Tab>
             <Tab>All Items</Tab>
           </TabList>
 
           <TabPanels>
-            <TabPanel p={0} pt={4}>
-              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
-        {isLoading && (
-          <Flex 
-            position="absolute" 
-            top="0" 
-            left="0" 
-            right="0" 
-            bottom="0" 
-            bg="rgba(255, 255, 255, 0.8)" 
-            zIndex="1" 
-            justify="center" 
-            align="center"
-          >
-            <Button isLoading loadingText="Loading data..." variant="ghost" />
-          </Flex>
-        )}
-                <GroceryTable 
-                  groceryData={groceryData}
-                  viewMode="categorized"
-                  onItemClick={(item) => {
-                    setSelectedItem(item)
-                    onOpen()
-                  }} 
-                />
-              </Box>
-            </TabPanel>
             <TabPanel p={0} pt={4}>
               <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
                 <GroceryTable 
