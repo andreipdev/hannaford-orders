@@ -194,14 +194,10 @@ export class HannafordScraper {
           // Start waiting for navigation before triggering the login
           this.page.waitForNavigation({
             waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
-            timeout: 60000
+            timeout: 30000
           }).catch(error => {
-            console.error('Navigation error details:', {
-              name: error.name,
-              message: error.message,
-              stack: error.stack
-            });
-            throw error;
+            console.warn('Login navigation timeout - falling back to cache');
+            return null;
           }),
 
           // Trigger the login
@@ -231,7 +227,8 @@ export class HannafordScraper {
           this.page.waitForSelector('[data-testid="account-menu"]', { timeout: 20000 })
         ]);
       } catch (error) {
-        throw new Error('Login failed - could not verify successful login');
+        console.warn('Login verification failed - falling back to cache');
+        return;
       }
     } catch (error) {
       await this.cleanup();
