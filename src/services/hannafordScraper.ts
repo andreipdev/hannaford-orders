@@ -580,7 +580,8 @@ export class HannafordScraper {
           monthlyBreakdown: {},
           monthlySpent: {},
           totalSpent: 0,
-          includedItems: new Set<string>()
+          includedItems: new Set<string>(),
+          includedItemsPerMonth: {}
         });
       }
 
@@ -591,11 +592,13 @@ export class HannafordScraper {
       if (!itemData.monthlyBreakdown[month]) {
         itemData.monthlyBreakdown[month] = 0;
         itemData.monthlySpent[month] = 0;
+        itemData.includedItemsPerMonth[month] = new Set<string>();
       }
       itemData.monthlyBreakdown[month] += purchase.quantity;
       itemData.monthlySpent[month] += purchase.unitPrice * purchase.quantity;
       itemData.totalSpent += purchase.unitPrice * purchase.quantity;
       itemData.includedItems.add(purchase.item);
+      itemData.includedItemsPerMonth[month].add(purchase.item);
     });
 
     // Calculate average spent per month for each item
@@ -609,7 +612,12 @@ export class HannafordScraper {
     return Array.from(itemMap.values())
       .map(item => ({
         ...item,
-        includedItems: Array.from(item.includedItems).sort()
+        includedItems: Array.from(item.includedItems).sort(),
+        includedItemsPerMonth: Object.fromEntries(
+          Object.entries(item.includedItemsPerMonth).map(
+            ([month, items]) => [month, Array.from(items).sort()]
+          )
+        )
       }))
       .sort((a, b) => b.spentPerMonth - a.spentPerMonth);
   }

@@ -49,15 +49,16 @@ export const MonthlyItemsModal = ({ isOpen, onClose, selectedItem, monthName }: 
           </Box>
           
           <Box mb={4}>
-            <Text fontWeight="bold" mb={2}>Items in this category:</Text>
+            <Text fontWeight="bold" mb={2}>Items purchased in {monthName}:</Text>
             <List spacing={2} mt={2}>
-              {selectedItem.includedItems && selectedItem.includedItems.map((item, index) => (
-                <ListItem key={index}>{item}</ListItem>
-              ))}
+              {selectedItem.includedItemsPerMonth && selectedItem.includedItemsPerMonth[monthName] ? (
+                selectedItem.includedItemsPerMonth[monthName].map((item, index) => (
+                  <ListItem key={index}>{item}</ListItem>
+                ))
+              ) : (
+                <ListItem>No specific items found for this month</ListItem>
+              )}
             </List>
-            <Text mt={4} fontSize="sm" color="gray.600">
-              Note: This shows all items in this category. The specific items purchased in {monthName} may vary.
-            </Text>
           </Box>
         </ModalBody>
         <ModalFooter>
