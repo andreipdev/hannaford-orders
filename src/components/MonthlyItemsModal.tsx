@@ -25,6 +25,16 @@ interface MonthlyItemsModalProps {
 export const MonthlyItemsModal = ({ isOpen, onClose, selectedItem, monthName }: MonthlyItemsModalProps) => {
   if (!selectedItem) return null
 
+  // Get the count of items purchased in this month
+  const itemCount = selectedItem.monthlyBreakdown && selectedItem.monthlyBreakdown[monthName] 
+    ? selectedItem.monthlyBreakdown[monthName] 
+    : 0;
+  
+  // Get the amount spent in this month
+  const amountSpent = selectedItem.monthlySpent && selectedItem.monthlySpent[monthName]
+    ? selectedItem.monthlySpent[monthName]
+    : 0;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
@@ -33,12 +43,21 @@ export const MonthlyItemsModal = ({ isOpen, onClose, selectedItem, monthName }: 
         <ModalCloseButton />
         <ModalBody>
           <Box mb={4}>
-            <Text fontWeight="bold">Items purchased this month:</Text>
+            <Text fontWeight="bold" mb={2}>Summary for {monthName}:</Text>
+            <Text>Purchased {itemCount} times</Text>
+            <Text>Total spent: ${amountSpent.toFixed(2)}</Text>
+          </Box>
+          
+          <Box mb={4}>
+            <Text fontWeight="bold" mb={2}>Items in this category:</Text>
             <List spacing={2} mt={2}>
               {selectedItem.includedItems && selectedItem.includedItems.map((item, index) => (
                 <ListItem key={index}>{item}</ListItem>
               ))}
             </List>
+            <Text mt={4} fontSize="sm" color="gray.600">
+              Note: This shows all items in this category. The specific items purchased in {monthName} may vary.
+            </Text>
           </Box>
         </ModalBody>
         <ModalFooter>
