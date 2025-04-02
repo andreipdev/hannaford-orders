@@ -5,7 +5,7 @@ import { GroceryData } from '../types/groceryTypes'
 
 interface GroceryTableProps {
   groceryData: GroceryData[]
-  viewMode: 'topCategories' | 'all'
+  viewMode: 'topCategories' | 'all' | 'pastMonth' | 'beforeLastMonth'
   onItemClick: (item: GroceryData) => void
 }
 
@@ -29,8 +29,47 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     return organized;
   };
 
+  // Filter data based on the view mode
+  const getFilteredData = () => {
+    if (viewMode === 'pastMonth') {
+      // Filter for March 2025 (current month)
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      return groceryData.filter(item => {
+        // Check if any purchase was made in the current month
+        return item.monthlyBreakdown.some(entry => {
+          const entryDate = new Date(entry.month);
+          return entryDate.getMonth() === currentMonth && 
+                 entryDate.getFullYear() === currentYear;
+        });
+      });
+    } else if (viewMode === 'beforeLastMonth') {
+      // Filter for February 2025 (previous month)
+      const now = new Date();
+      const previousMonth = now.getMonth() - 1;
+      // Handle January case (previous month would be December of previous year)
+      const previousMonthYear = previousMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const adjustedPreviousMonth = previousMonth < 0 ? 11 : previousMonth;
+      
+      return groceryData.filter(item => {
+        // Check if any purchase was made in the previous month
+        return item.monthlyBreakdown.some(entry => {
+          const entryDate = new Date(entry.month);
+          return entryDate.getMonth() === adjustedPreviousMonth && 
+                 entryDate.getFullYear() === previousMonthYear;
+        });
+      });
+    }
+    
+    // Default case: return all data
+    return groceryData;
+  };
+
   const renderTable = () => {
-    if (viewMode === 'all') {
+    if (viewMode === 'all' || viewMode === 'pastMonth' || viewMode === 'beforeLastMonth') {
+      const filteredData = viewMode === 'all' ? groceryData : getFilteredData();
       return (
         <Table variant="simple">
           <Thead>
@@ -43,7 +82,7 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
             </Tr>
           </Thead>
           <Tbody>
-            {groceryData.map((item) => (
+            {filteredData.map((item) => (
               <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                 <Td>{item.item}</Td>
                 <Td isNumeric>

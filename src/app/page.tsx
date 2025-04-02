@@ -1,5 +1,5 @@
 'use client'
-import { Box, Button, Container, Heading, Flex, useDisclosure, Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react'
+import { Box, Button, Container, Heading, Flex, useDisclosure, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import { GroceryTable } from '../components/GroceryTable'
 import { MonthlyBreakdownModal } from '../components/MonthlyBreakdownModal'
@@ -10,6 +10,21 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<GroceryData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  
+  // Get current and previous month names
+  const getCurrentMonthName = () => {
+    const date = new Date();
+    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
+  
+  const getPreviousMonthName = () => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
+  
+  const currentMonth = getCurrentMonthName();
+  const previousMonth = getPreviousMonthName();
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   useEffect(() => {
@@ -68,6 +83,8 @@ export default function Home() {
           <TabList>
             <Tab>Top Categories</Tab>
             <Tab>All Items</Tab>
+            <Tab>{currentMonth}</Tab>
+            <Tab>{previousMonth}</Tab>
           </TabList>
 
           <TabPanels>
@@ -88,6 +105,30 @@ export default function Home() {
                 <GroceryTable
                   groceryData={groceryData}
                   viewMode="all"
+                  onItemClick={(item) => {
+                    setSelectedItem(item)
+                    onOpen()
+                  }}
+                />
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} pt={4}>
+              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
+                <GroceryTable
+                  groceryData={groceryData}
+                  viewMode="pastMonth"
+                  onItemClick={(item) => {
+                    setSelectedItem(item)
+                    onOpen()
+                  }}
+                />
+              </Box>
+            </TabPanel>
+            <TabPanel p={0} pt={4}>
+              <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
+                <GroceryTable
+                  groceryData={groceryData}
+                  viewMode="beforeLastMonth"
                   onItemClick={(item) => {
                     setSelectedItem(item)
                     onOpen()
