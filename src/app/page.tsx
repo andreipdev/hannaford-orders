@@ -120,6 +120,16 @@ export default function Home() {
               </Box>
             </TabPanel>
             <TabPanel p={0} pt={4}>
+              {/* Calculate total spent for current month */}
+              <Box mb={4}>
+                <Text fontSize="lg" fontWeight="bold">
+                  Total spent in {currentMonthShort}: $
+                  {groceryData
+                    .filter(item => item.monthlySpent && item.monthlySpent[currentMonthShort])
+                    .reduce((total, item) => total + (item.monthlySpent[currentMonthShort] || 0), 0)
+                    .toFixed(2)}
+                </Text>
+              </Box>
               <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
                 <GroceryTable
                   groceryData={groceryData}
@@ -132,6 +142,16 @@ export default function Home() {
               </Box>
             </TabPanel>
             <TabPanel p={0} pt={4}>
+              {/* Calculate total spent for previous month */}
+              <Box mb={4}>
+                <Text fontSize="lg" fontWeight="bold">
+                  Total spent in {previousMonthShort}: $
+                  {groceryData
+                    .filter(item => item.monthlySpent && item.monthlySpent[previousMonthShort])
+                    .reduce((total, item) => total + (item.monthlySpent[previousMonthShort] || 0), 0)
+                    .toFixed(2)}
+                </Text>
+              </Box>
               <Box shadow="md" borderWidth="1px" borderRadius="lg" overflow="hidden" position="relative">
                 <GroceryTable
                   groceryData={groceryData}
