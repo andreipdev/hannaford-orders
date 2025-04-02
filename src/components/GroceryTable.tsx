@@ -13,6 +13,8 @@ import { categoryMappings } from '../config/categories'
 import { topCategoryMappings, getTopCategory } from '../config/topCategories'
 
 export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTableProps) => {
+  console.log(groceryData);
+
   const organizeDataByTopCategory = () => {
     const organized: { [topCategory: string]: GroceryData[] } = {};
 
@@ -36,18 +38,18 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-      
+
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the current month
         if (!item.monthlyBreakdown || !Array.isArray(item.monthlyBreakdown)) {
           return false;
         }
-        
+
         return item.monthlyBreakdown.some(entry => {
           if (!entry || !entry.month) return false;
           const entryDate = new Date(entry.month);
-          return entryDate.getMonth() === currentMonth && 
-                 entryDate.getFullYear() === currentYear;
+          return entryDate.getMonth() === currentMonth &&
+            entryDate.getFullYear() === currentYear;
         });
       });
     } else if (viewMode === 'beforeLastMonth') {
@@ -57,22 +59,22 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
       // Handle January case (previous month would be December of previous year)
       const previousMonthYear = previousMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
       const adjustedPreviousMonth = previousMonth < 0 ? 11 : previousMonth;
-      
+
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the previous month
         if (!item.monthlyBreakdown || !Array.isArray(item.monthlyBreakdown)) {
           return false;
         }
-        
+
         return item.monthlyBreakdown.some(entry => {
           if (!entry || !entry.month) return false;
           const entryDate = new Date(entry.month);
-          return entryDate.getMonth() === adjustedPreviousMonth && 
-                 entryDate.getFullYear() === previousMonthYear;
+          return entryDate.getMonth() === adjustedPreviousMonth &&
+            entryDate.getFullYear() === previousMonthYear;
         });
       });
     }
-    
+
     // Default case: return all data
     return groceryData;
   };
