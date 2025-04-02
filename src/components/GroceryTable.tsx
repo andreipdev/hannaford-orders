@@ -34,47 +34,35 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
   // Filter data based on the view mode
   const getFilteredData = () => {
     if (viewMode === 'pastMonth') {
-      // Filter for current month
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-
+      // Filter for current month (March)
+      const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+      
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the current month
-        if (!item.monthlyBreakdown || !Array.isArray(item.monthlyBreakdown)) {
+        if (!item.monthlyBreakdown || typeof item.monthlyBreakdown !== 'object') {
           return false;
         }
-
-        return item.monthlyBreakdown.some(entry => {
-          if (!entry || !entry.month) return false;
-          const entryDate = new Date(entry.month);
-          return entryDate.getMonth() === currentMonth &&
-            entryDate.getFullYear() === currentYear;
-        });
+        
+        // Check if the current month exists in the monthlyBreakdown and has a value > 0
+        return item.monthlyBreakdown[currentMonthName] > 0;
       });
     } else if (viewMode === 'beforeLastMonth') {
-      // Filter for previous month
-      const now = new Date();
-      const previousMonth = now.getMonth() - 1;
-      // Handle January case (previous month would be December of previous year)
-      const previousMonthYear = previousMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const adjustedPreviousMonth = previousMonth < 0 ? 11 : previousMonth;
-
+      // Filter for previous month (February)
+      const date = new Date();
+      date.setMonth(date.getMonth() - 1);
+      const previousMonthName = date.toLocaleString('default', { month: 'long' });
+      
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the previous month
-        if (!item.monthlyBreakdown || !Array.isArray(item.monthlyBreakdown)) {
+        if (!item.monthlyBreakdown || typeof item.monthlyBreakdown !== 'object') {
           return false;
         }
-
-        return item.monthlyBreakdown.some(entry => {
-          if (!entry || !entry.month) return false;
-          const entryDate = new Date(entry.month);
-          return entryDate.getMonth() === adjustedPreviousMonth &&
-            entryDate.getFullYear() === previousMonthYear;
-        });
+        
+        // Check if the previous month exists in the monthlyBreakdown and has a value > 0
+        return item.monthlyBreakdown[previousMonthName] > 0;
       });
     }
-
+    
     // Default case: return all data
     return groceryData;
   };
