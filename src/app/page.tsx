@@ -3,6 +3,7 @@ import { Box, Button, Container, Heading, Flex, useDisclosure, Tabs, TabList, Ta
 import { useEffect, useState } from 'react'
 import { GroceryTable } from '../components/GroceryTable'
 import { MonthlyBreakdownModal } from '../components/MonthlyBreakdownModal'
+import { MonthlyItemsModal } from '../components/MonthlyItemsModal'
 import { GroceryData } from '../types/groceryTypes'
 
 export default function Home() {
@@ -10,6 +11,7 @@ export default function Home() {
   const [selectedItem, setSelectedItem] = useState<GroceryData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const [activeTab, setActiveTab] = useState(0)
   
   // Get current and previous month names
   const getCurrentMonthName = () => {
@@ -25,7 +27,12 @@ export default function Home() {
   
   const currentMonth = getCurrentMonthName();
   const previousMonth = getPreviousMonthName();
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const currentMonthShort = new Date().toLocaleString('default', { month: 'long' });
+  const previousMonthShort = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' });
+  
+  // Separate disclosure hooks for different modals
+  const { isOpen: isBreakdownOpen, onOpen: onBreakdownOpen, onClose: onBreakdownClose } = useDisclosure()
+  const { isOpen: isMonthlyItemsOpen, onOpen: onMonthlyItemsOpen, onClose: onMonthlyItemsClose } = useDisclosure()
 
   useEffect(() => {
     const controller = new AbortController();
@@ -79,7 +86,7 @@ export default function Home() {
           </Button>
         </Flex>
 
-        <Tabs variant="enclosed">
+        <Tabs variant="enclosed" onChange={(index) => setActiveTab(index)}>
           <TabList>
             <Tab>Top Categories</Tab>
             <Tab>All Items</Tab>
@@ -95,7 +102,7 @@ export default function Home() {
                   viewMode="topCategories"
                   onItemClick={(item) => {
                     setSelectedItem(item)
-                    onOpen()
+                    onBreakdownOpen()
                   }}
                 />
               </Box>
@@ -107,7 +114,7 @@ export default function Home() {
                   viewMode="all"
                   onItemClick={(item) => {
                     setSelectedItem(item)
-                    onOpen()
+                    onBreakdownOpen()
                   }}
                 />
               </Box>
@@ -119,7 +126,7 @@ export default function Home() {
                   viewMode="pastMonth"
                   onItemClick={(item) => {
                     setSelectedItem(item)
-                    onOpen()
+                    onMonthlyItemsOpen()
                   }}
                 />
               </Box>
@@ -131,7 +138,7 @@ export default function Home() {
                   viewMode="beforeLastMonth"
                   onItemClick={(item) => {
                     setSelectedItem(item)
-                    onOpen()
+                    onMonthlyItemsOpen()
                   }}
                 />
               </Box>
@@ -140,10 +147,18 @@ export default function Home() {
         </Tabs>
       </Flex>
 
+      {/* Use different modals based on the active tab */}
       <MonthlyBreakdownModal
-        isOpen={isOpen}
-        onClose={onClose}
+        isOpen={isBreakdownOpen}
+        onClose={onBreakdownClose}
         selectedItem={selectedItem}
+      />
+      
+      <MonthlyItemsModal
+        isOpen={isMonthlyItemsOpen}
+        onClose={onMonthlyItemsClose}
+        selectedItem={selectedItem}
+        monthName={activeTab === 2 ? currentMonthShort : previousMonthShort}
       />
     </Container>
   )

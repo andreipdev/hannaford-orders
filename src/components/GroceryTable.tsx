@@ -70,6 +70,14 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
   const renderTable = () => {
     if (viewMode === 'all' || viewMode === 'pastMonth' || viewMode === 'beforeLastMonth') {
       const filteredData = viewMode === 'all' ? groceryData : getFilteredData();
+      
+      // Get the appropriate month name based on view mode
+      const monthName = viewMode === 'pastMonth' 
+        ? new Date().toLocaleString('default', { month: 'long' })
+        : viewMode === 'beforeLastMonth'
+          ? new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' })
+          : '';
+      
       return (
         <Table variant="simple">
           <Thead>
@@ -77,25 +85,44 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
               <Th>Item</Th>
               <Th isNumeric>Unit Price</Th>
               <Th isNumeric>Times Purchased</Th>
-              <Th isNumeric>Total Spent</Th>
-              <Th isNumeric>Spent per Month</Th>
+              {viewMode === 'all' ? (
+                <>
+                  <Th isNumeric>Total Spent</Th>
+                  <Th isNumeric>Spent per Month</Th>
+                </>
+              ) : (
+                <Th isNumeric>{`Spent in ${monthName}`}</Th>
+              )}
             </Tr>
           </Thead>
           <Tbody>
-            {filteredData.map((item) => (
-              <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
-                <Td>{item.item}</Td>
-                <Td isNumeric>
-                  {item.priceRange.min === item.priceRange.max ?
-                    `$${item.priceRange.min.toFixed(2)}` :
-                    `$${item.priceRange.min.toFixed(2)}-$${item.priceRange.max.toFixed(2)}`
-                  }
-                </Td>
-                <Td isNumeric>{item.timesPurchased}</Td>
-                <Td isNumeric>${item.totalSpent.toFixed(2)}</Td>
-                <Td isNumeric>${item.spentPerMonth.toFixed(2)}</Td>
-              </Tr>
-            ))}
+            {filteredData.map((item) => {
+              // Calculate the monthly spent for the specific month
+              const monthlySpent = viewMode !== 'all' && item.monthlySpent && typeof item.monthlySpent === 'object'
+                ? item.monthlySpent[monthName] || 0
+                : 0;
+              
+              return (
+                <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
+                  <Td>{item.item}</Td>
+                  <Td isNumeric>
+                    {item.priceRange.min === item.priceRange.max ?
+                      `$${item.priceRange.min.toFixed(2)}` :
+                      `$${item.priceRange.min.toFixed(2)}-$${item.priceRange.max.toFixed(2)}`
+                    }
+                  </Td>
+                  <Td isNumeric>{viewMode === 'all' ? item.timesPurchased : item.monthlyBreakdown[monthName] || 0}</Td>
+                  {viewMode === 'all' ? (
+                    <>
+                      <Td isNumeric>${item.totalSpent.toFixed(2)}</Td>
+                      <Td isNumeric>${item.spentPerMonth.toFixed(2)}</Td>
+                    </>
+                  ) : (
+                    <Td isNumeric>${monthlySpent.toFixed(2)}</Td>
+                  )}
+                </Tr>
+              );
+            })}
           </Tbody>
         </Table>
       );
