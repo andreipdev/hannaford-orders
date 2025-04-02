@@ -69,11 +69,11 @@ export class HannafordScraper {
       for (let i = 0; i < unclippedCoupons.length; i++) {
         try {
           const couponTile = unclippedCoupons[i];
-          
+
           // Get coupon details for logging
           const brandName = await couponTile.$eval('.brand', el => el.textContent);
           const savings = await couponTile.$eval('.summary', el => el.textContent);
-          
+
           // Scroll tile into view
           await this.page.evaluate(el => {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -89,7 +89,7 @@ export class HannafordScraper {
 
           await clipButton.click();
           console.log(`Clipped coupon ${i + 1}/${unclippedCoupons.length}: ${brandName} - ${savings}`);
-          
+
           // Wait between clips to avoid rate limiting
           await this.page.waitForTimeout(2000);
 
@@ -250,7 +250,9 @@ export class HannafordScraper {
       // If we have recent data, use cached data only
       if (!this.shouldRefreshData()) {
         console.log('Using cached data from last 24 hours...');
-        const cachedDates = this.getCachedDatesForYear(currentYear);
+        const cachedDates = this.getCachedDatesFor12Months();
+
+        console.log(cachedDates);
 
         for (const dateKey of cachedDates) {
           const orderItems = this.cache.get(dateKey);
@@ -495,6 +497,28 @@ export class HannafordScraper {
     const metadata = this.getMetadata();
     return metadata.yearCaches[year] || [];
   }
+
+  private getCachedDatesFor12Months(): string[] {
+    const metadata = this.getMetadata();
+
+    const currentYear = new Date().getFullYear().toString();
+    const pastYear = (new Date().getFullYear() - 1).toString();
+
+    let result = [];
+    const pastYearCaches = metadata.yearCaches[pastYear].sort() || [];
+
+    for (const ymdKey of pastYearCaches) {
+      if (new Date(ymdKey) > new Date(new Date().setFullYear(new Date().getFullYear() - 1))) {
+        result.push(ymdKey);
+      }
+    }
+
+    const currentYearResult = metadata.yearCaches[currentYear].sort() || [];
+    result = result.concat(currentYearResult);
+
+    return result;
+  }
+
 
   async close() {
     await this.cleanup();
