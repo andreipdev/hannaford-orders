@@ -36,13 +36,13 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
     if (viewMode === 'pastMonth') {
       // Filter for current month (March)
       const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
-      
+
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the current month
         if (!item.monthlyBreakdown || typeof item.monthlyBreakdown !== 'object') {
           return false;
         }
-        
+
         // Check if the current month exists in the monthlyBreakdown and has a value > 0
         return item.monthlyBreakdown[currentMonthName] > 0;
       });
@@ -51,18 +51,18 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
       const date = new Date();
       date.setMonth(date.getMonth() - 1);
       const previousMonthName = date.toLocaleString('default', { month: 'long' });
-      
+
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the previous month
         if (!item.monthlyBreakdown || typeof item.monthlyBreakdown !== 'object') {
           return false;
         }
-        
+
         // Check if the previous month exists in the monthlyBreakdown and has a value > 0
         return item.monthlyBreakdown[previousMonthName] > 0;
       });
     }
-    
+
     // Default case: return all data
     return groceryData;
   };
@@ -70,14 +70,31 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
   const renderTable = () => {
     if (viewMode === 'all' || viewMode === 'pastMonth' || viewMode === 'beforeLastMonth') {
       const filteredData = viewMode === 'all' ? groceryData : getFilteredData();
-      
+
       // Get the appropriate month name based on view mode
-      const monthName = viewMode === 'pastMonth' 
+      const monthName = viewMode === 'pastMonth'
         ? new Date().toLocaleString('default', { month: 'long' })
         : viewMode === 'beforeLastMonth'
           ? new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' })
           : '';
-      
+
+
+      // if it's monthly spent, order by spent per month
+      if (viewMode === 'pastMonth' || viewMode === 'beforeLastMonth') {
+
+
+        filteredData.sort((a, b) => {
+          const monthlySpentA = a.monthlySpent && typeof a.monthlySpent === 'object'
+            ? a.monthlySpent[monthName] || 0
+            : 0;
+
+          const monthlySpentB = b.monthlySpent && typeof b.monthlySpent === 'object'
+            ? b.monthlySpent[monthName] || 0
+            : 0;
+          return monthlySpentB - monthlySpentA;
+        });
+      }
+
       return (
         <Table variant="simple">
           <Thead>
@@ -101,7 +118,7 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
               const monthlySpent = viewMode !== 'all' && item.monthlySpent && typeof item.monthlySpent === 'object'
                 ? item.monthlySpent[monthName] || 0
                 : 0;
-              
+
               return (
                 <Tr key={item.item} cursor="pointer" _hover={{ bg: "gray.50" }} onClick={() => onItemClick(item)}>
                   <Td>{item.item}</Td>
