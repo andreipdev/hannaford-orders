@@ -1,7 +1,12 @@
-import puppeteer from 'puppeteer';
+import path from 'path';
+import fs from 'fs';
+import puppeteerExtra from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { CacheService } from './cacheService';
 import { categoryMappings } from '../config/categories';
 import { findDefaultPrice } from '../config/defaultPrices';
+
+puppeteerExtra.use(StealthPlugin());
 
 interface HannafordCredentials {
   username: string;
@@ -10,7 +15,7 @@ interface HannafordCredentials {
 
 interface ScraperMetadata {
   lastFetchTimestamp: number;
-  yearCaches: { [year: string]: string[] };  // year -> array of date keys
+  yearCaches: { [year: string]: string[] };
 }
 
 interface PurchaseData {
@@ -20,551 +25,316 @@ interface PurchaseData {
   date: Date;
 }
 
+const ORDERS_URL = 'https://www.hannaford.com/account/history/invoice/in-store';
+
 export class HannafordScraper {
   private browser: any;
   private page: any;
   private abortSignal: AbortSignal | undefined;
   private cache: CacheService;
-  private readonly metadataFilePath: string = '.cache/scraper_metadata.json';
-  private processedUrls: Set<string>;
-  private static readonly METADATA_KEY = 'scraper_metadata';
+  private readonly metadataFilePath = '.cache/scraper_metadata.json';
+  private readonly profileDir = path.join(process.cwd(), '.chrome-profile');
 
   constructor(signal?: AbortSignal) {
     this.abortSignal = signal;
     this.cache = new CacheService();
-    // Ensure .cache directory exists
-    if (!require('fs').existsSync('.cache')) {
-      require('fs').mkdirSync('.cache', { recursive: true });
-    }
-    this.processedUrls = new Set();
-
-    // Ensure cleanup on process termination
-    process.on('exit', this.cleanup.bind(this));
-    process.on('SIGINT', this.cleanup.bind(this));
-    process.on('SIGTERM', this.cleanup.bind(this));
-    process.on('uncaughtException', async (error) => {
-      console.error('Uncaught exception:', error);
-      await this.cleanup();
-      process.exit(1);
-    });
+    if (!fs.existsSync('.cache')) fs.mkdirSync('.cache', { recursive: true });
   }
 
-  async clipCoupons() {
-    try {
-      console.log('Navigating to coupons page...');
-      await this.page.goto('https://www.hannaford.com/coupons', {
-        waitUntil: 'networkidle0',
-        timeout: 120000
-      });
-
-      // Wait for coupons to load
-      console.log('Waiting for coupons to load...');
-      await this.page.waitForSelector('.couponTile', { timeout: 30000 });
-
-      // Get all unclipped coupon tiles
-      const unclippedCoupons = await this.page.$$('.couponTile.available');
-      console.log(`Found ${unclippedCoupons.length} unclipped coupons`);
-
-      // Clip each coupon
-      for (let i = 0; i < unclippedCoupons.length; i++) {
-        try {
-          const couponTile = unclippedCoupons[i];
-
-          // Get coupon details for logging
-          const brandName = await couponTile.$eval('.brand', el => el.textContent);
-          const savings = await couponTile.$eval('.summary', el => el.textContent);
-
-          // Scroll tile into view
-          await this.page.evaluate(el => {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }, couponTile);
-          await this.page.waitForTimeout(1000);
-
-          // Find and click the clip button within this tile
-          const clipButton = await couponTile.$('.clipTarget');
-          if (!clipButton) {
-            console.warn(`No clip button found for coupon: ${brandName}`);
-            continue;
-          }
-
-          await clipButton.click();
-          console.log(`Clipped coupon ${i + 1}/${unclippedCoupons.length}: ${brandName} - ${savings}`);
-
-          // Wait between clips to avoid rate limiting
-          await this.page.waitForTimeout(2000);
-
-          // Verify the coupon was clipped
-          const wasClipped = await this.page.evaluate(tile => {
-            return tile.classList.contains('clipped');
-          }, couponTile);
-
-          if (!wasClipped) {
-            console.warn(`Coupon may not have been clipped successfully: ${brandName}`);
-          }
-
-        } catch (error) {
-          console.error(`Failed to clip coupon ${i + 1}:`, error);
-          continue;
-        }
-      }
-
-      console.log('Finished clipping coupons');
-    } catch (error) {
-      console.error('Error in clipCoupons:', error);
-      throw error;
-    }
+  private log(...args: any[]) {
+    console.log('[hannaford]', ...args);
   }
 
   private async cleanup() {
-    console.log('Cleaning up Puppeteer resources...');
     if (this.page) {
-      try {
-        await this.page.close();
-      } catch (error) {
-        console.error('Error closing page:', error);
-      }
+      try { await this.page.close(); } catch {}
       this.page = null;
     }
     if (this.browser) {
-      try {
-        await this.browser.close();
-      } catch (error) {
-        console.error('Error closing browser:', error);
-      }
+      try { await this.browser.close(); } catch {}
       this.browser = null;
     }
   }
 
+  private checkAborted() {
+    if (this.abortSignal?.aborted) throw new Error('Operation cancelled');
+  }
+
   async initialize() {
-    try {
-      // Check if already aborted
-      if (this.abortSignal?.aborted) {
-        throw new Error('Operation cancelled');
-      }
-      this.browser = await puppeteer.launch({
-        headless: 'new', // Use new headless mode
-        args: [
-          '--disable-http2',
-          '--no-sandbox',
-          '--disable-setuid-sandbox'
-        ]
-      });
-      this.page = await this.browser.newPage();
-    } catch (error) {
-      await this.cleanup();
-      throw error;
+    this.checkAborted();
+    // Hannaford is behind DataDome — headless is almost always flagged.
+    // Default to headful; set HANNAFORD_HEADLESS=1 to override once cookies are warm.
+    const headless = process.env.HANNAFORD_HEADLESS === '1';
+    this.browser = await puppeteerExtra.launch({
+      headless: headless ? 'new' : false,
+      userDataDir: this.profileDir,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-blink-features=AutomationControlled',
+        '--window-size=1400,1000',
+      ],
+    });
+    const pages = await this.browser.pages();
+    this.page = pages[0] || (await this.browser.newPage());
+    await this.page.setViewport({ width: 1400, height: 1000 });
+  }
+
+  // Wait until the page is past any DataDome / "Security Block" interstitial.
+  private async waitForNotBlocked(maxSeconds = 300): Promise<boolean> {
+    for (let i = 0; i < maxSeconds; i++) {
+      this.checkAborted();
+      const title = await this.page.title().catch(() => '');
+      const blocked = /^hannaford\.com$/i.test(title)
+        || /security block|verification required|just a moment/i.test(title);
+      if (!blocked) return true;
+      if (i === 0) this.log('DataDome interstitial detected — solve the captcha in the Chrome window.');
+      if (i % 10 === 0 && i > 0) this.log(`still waiting for captcha… ${i}s`);
+      await new Promise(r => setTimeout(r, 1000));
     }
+    return false;
   }
 
   async login(credentials: HannafordCredentials) {
-    try {
-      // Check if we need to refresh data before logging in
-      if (!this.shouldRefreshData()) {
-        console.log('Using cached data - skipping login');
-        return;
-      }
-
-      console.log('Navigating to login page: https://www.hannaford.com/login');
-      await this.page.goto('https://www.hannaford.com/login', {
-        waitUntil: 'networkidle0',
-        timeout: 120000
-      });
-
-      // Wait for page load
-      await this.page.waitForTimeout(5000);
-
-      // Wait for login form
-      try {
-        await this.page.waitForSelector('#userName', { timeout: 30000 });
-      } catch (error) {
-        throw new Error('Login form not found - check page structure');
-      }
-
-      // Find the username and password fields
-      const usernameSelector = await this.page.waitForSelector('#userName');
-      const passwordSelector = await this.page.waitForSelector('#passwordField6');
-
-      // Type credentials
-      await usernameSelector.type(credentials.username);
-      await passwordSelector.type(credentials.password);
-
-      try {
-
-        await Promise.all([
-          // Start waiting for navigation before triggering the login
-          this.page.waitForNavigation({
-            waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
-            timeout: 30000
-          }).catch(error => {
-            console.warn('Login navigation timeout - falling back to cache');
-            return null;
-          }),
-
-          // Trigger the login
-          this.page.evaluate(() => {
-            // Call the login function with the correct form and index
-            if (typeof registerUserLoyalty === 'function') {
-              const form = document.forms['registerUserLoyaltyForm6'];
-              if (!form) {
-                throw new Error('Login form not found');
-              }
-              registerUserLoyalty(form, 6);
-            } else {
-              throw new Error('registerUserLoyalty function not found');
-            }
-          })
-        ]);
-
-      } catch (error) {
-        throw error;
-      }
-
-      // Verify login was successful
-      try {
-        await Promise.race([
-          this.page.waitForSelector('.account-nav', { timeout: 20000 }),
-          this.page.waitForSelector('.my-account', { timeout: 20000 }),
-          this.page.waitForSelector('[data-testid="account-menu"]', { timeout: 20000 })
-        ]);
-      } catch (error) {
-        console.warn('Login verification failed - falling back to cache');
-        return;
-      }
-    } catch (error) {
-      await this.cleanup();
-      throw error;
+    if (!this.shouldRefreshData()) {
+      this.log('using cached data — skipping login');
+      return;
     }
+
+    this.log('navigating to orders page');
+    await this.page.goto(ORDERS_URL, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    const cleared = await this.waitForNotBlocked();
+    if (!cleared) throw new Error('timed out waiting for DataDome interstitial');
+
+    // Give the SPA a moment to decide whether to pop the login modal.
+    await new Promise(r => setTimeout(r, 4000));
+
+    const loginModal = await this.page.$('#login-username');
+    if (!loginModal) {
+      this.log('no login modal — session appears valid');
+      return;
+    }
+
+    this.log('login modal present; filling credentials');
+    await this.page.type('#login-username', credentials.username, { delay: 40 });
+    await this.page.type('#current-password', credentials.password, { delay: 40 });
+    await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null),
+      this.page.click('#sign-in-button'),
+    ]);
+    await new Promise(r => setTimeout(r, 5000));
+
+    // OTP / "Verify with a secure code" step — user must complete it manually.
+    const hasOtpPrompt = async () => this.page.evaluate(() => {
+      const text = document.body?.innerText || '';
+      return /verify\s+with\s+a\s+secure\s+code|enter\s+your\s+code|send\s+code/i.test(text);
+    }).catch(() => false);
+
+    if (await hasOtpPrompt()) {
+      this.log('SMS/email verification required — complete it in the Chrome window.');
+      for (let i = 0; i < 600; i++) {
+        this.checkAborted();
+        await new Promise(r => setTimeout(r, 1000));
+        if (!(await hasOtpPrompt())) { this.log(`OTP resolved after ${i}s`); break; }
+        if (i > 0 && i % 30 === 0) this.log(`still waiting for OTP… ${i}s`);
+      }
+    }
+
+    await this.waitForNotBlocked();
   }
 
   async scrapeOrders(): Promise<PurchaseData[]> {
-    try {
-      const checkAborted = () => {
-        if (this.abortSignal?.aborted) {
-          throw new Error('Operation cancelled');
-        }
-      };
-
-      const currentYear = new Date().getFullYear().toString();
-      const purchases: PurchaseData[] = [];
-
-      // If we have recent data, use cached data only
-      if (!this.shouldRefreshData()) {
-        console.log('Using cached data from last 24 hours...');
-        const cachedDates = this.getCachedDatesFor12Months();
-
-        console.log(cachedDates);
-
-        for (const dateKey of cachedDates) {
-          const orderItems = this.cache.get(dateKey);
-          if (orderItems) {
-            orderItems.forEach(itemData => {
-              if (itemData) {
-                purchases.push({
-                  item: itemData.name,
-                  unitPrice: itemData.price,
-                  quantity: itemData.quantity,
-                  date: new Date(dateKey)
-                });
-              }
-            });
-          }
-        }
-        return purchases;
-      }
-
-      // If we need fresh data, proceed with scraping
-      console.log('Cache expired or not found, fetching fresh data...');
-      if (this.abortSignal?.aborted) {
-        throw new Error('Operation cancelled');
-      }
-
-      console.log('Navigating to orders page: https://www.hannaford.com/account/my-orders/in-store');
-      await this.page.goto('https://www.hannaford.com/account/my-orders/in-store', {
-        waitUntil: 'networkidle0',
-        timeout: 120000
-      });
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-      // First, collect all order URLs and dates
-      const ordersList: { url: string; date: Date }[] = [];
-      let continueLoading = true;
-
-      while (continueLoading) {
-        checkAborted();
-
-        console.log('Waiting for orders table to load...');
-        try {
-          await this.page.waitForSelector('.store-purchase-table', { timeout: 30000 });
-        } catch (error) {
-          console.error('Failed to find orders table. Current URL:', await this.page.url());
-          throw new Error('Could not find orders table - check page structure');
-        }
-
-        // Get all order rows on current page
-        let newOrders = await this.page.evaluate(() => {
-          const rows = Array.from(document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)'));
-
-          return rows.map(row => ({
-            date: row.querySelector('.store-date')?.textContent?.trim() || '',
-            url: row.querySelector('.view-details-link')?.getAttribute('href') || ''
-          }));
-        });
-
-        // filter out rows with no date
-        newOrders = newOrders.filter(order => order.date);
-
-        // Process the collected orders
-        for (const order of newOrders) {
-          const orderDate = new Date(order.date);
-          if (orderDate < oneYearAgo) {
-            continueLoading = false;
-            break;
-          }
-
-          if (order.url) {
-            const fullUrl = new URL(order.url, 'https://www.hannaford.com').href;
-            if (!this.processedUrls.has(fullUrl)) {
-              ordersList.push({
-                url: fullUrl,
-                date: orderDate
-              });
-            }
-          } else {
-            console.log(`No "View Details" link found for order dated ${orderDate.toISOString()}`);
-            continueLoading = false;
-            break;
-          }
-        }
-
-        if (continueLoading) {
-          const seeMoreButton = await this.page.$('#see-more-btn');
-          if (seeMoreButton) {
-            console.log('Found "See More" button, clicking it...');
-            // Get current number of rows
-            const currentRowCount = await this.page.evaluate(() =>
-              document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)').length
-            );
-
-            await seeMoreButton.click();
-
-            // Wait for row count to increase
-            await this.page.waitForFunction(
-              (previousCount) => {
-                const rows = document.querySelectorAll('.store-purchase-table tbody tr:not(:last-child)');
-                return rows.length > previousCount;
-              },
-              { timeout: 30000 },
-              currentRowCount
-            );
-
-            // Small delay to ensure content is stable
-            await this.page.waitForTimeout(1000);
-          } else {
-            console.log('No more "See More" button found, finishing collection...');
-            continueLoading = false;
-          }
-        }
-      }
-
-      console.log(`Collected ${ordersList.length} orders to process`);
-
-      // Now process each order
-      for (const order of ordersList) {
-        checkAborted();
-
-        // Check cache first
-        const orderDateKey = order.date.toISOString().split('T')[0];
-        let orderItems = this.cache.get(orderDateKey);
-
-        if (!orderItems) {
-          // Navigate to order details page
-          const detailsPage = await this.browser.newPage();
-          console.log(`Navigating to order details: ${order.url}`);
-          await detailsPage.goto(order.url, {
-            timeout: 120000
-          });
-
-          // Wait for the items to load
-          await detailsPage.waitForSelector('.item-wrapper', { timeout: 30000 });
-
-          // Extract items from the order
-          const items = await detailsPage.$$('.item-wrapper');
-
-          // Process items and store in cache
-          orderItems = await Promise.all(items.map(item => item.evaluate((el: Element) => {
-            const nameEl = el.querySelector('.productName');
-            const qtyEl = el.querySelector('.qty');
-            const priceEl = el.querySelector('.item-price');
-
-            if (!nameEl || !qtyEl || !priceEl) return null;
-
-            return {
-              name: nameEl.textContent?.trim() || '',
-              price: parseFloat(priceEl.getAttribute('value') || '0'),
-              quantity: parseInt(qtyEl.textContent?.trim() || '0')
-            };
-          })));
-
-          const orderDateKey = order.date.toISOString().split('T')[0];
-          this.cache.set(orderDateKey, orderItems);
-          this.addDateToYearCache(orderDateKey);
-
-          // Close the details page
-          await detailsPage.close();
-        } else {
-          console.log(`Using cached data for order date: ${orderDateKey}`);
-        }
-
-        // Mark URL as processed
-        this.processedUrls.add(order.url);
-
-        // Process the items
-        orderItems.forEach(itemData => {
-          if (itemData) {
-            console.log(`  - ${itemData.name}: ${itemData.quantity} @ $${itemData.price}`);
-            purchases.push({
-              item: itemData.name,
-              unitPrice: itemData.price,
-              quantity: itemData.quantity,
-              date: order.date
-            });
-          }
-        });
-      }
-
-      // Update last fetch timestamp
-      const metadata = this.getMetadata();
-      metadata.lastFetchTimestamp = Date.now();
-      this.saveMetadata(metadata);
-
-      return purchases;
-    } catch (error) {
-      await this.cleanup();
-      throw error;
+    if (this.shouldRefreshData()) {
+      await this.scrapeFreshOrdersIntoCache();
+    } else {
+      this.log('cache fresh (<24h) — skipping site scrape');
     }
+
+    const purchases: PurchaseData[] = [];
+    for (const dateKey of this.getCachedDatesFor12Months()) {
+      const items = this.cache.get(dateKey);
+      if (!items) continue;
+      items.forEach((d: any) => d && purchases.push({
+        item: d.name, unitPrice: d.price, quantity: d.quantity, date: new Date(dateKey),
+      }));
+    }
+    return purchases;
+  }
+
+  private async scrapeFreshOrdersIntoCache(): Promise<void> {
+    this.log('scraping fresh data');
+    // Make sure we're on the orders list (login() may have left us elsewhere).
+    if (!/history\/invoice\/in-store/.test(this.page.url())) {
+      await this.page.goto(ORDERS_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await this.waitForNotBlocked();
+    }
+
+    try {
+      await this.page.waitForSelector('li[orderid]', { timeout: 30000 });
+    } catch {
+      throw new Error('orders list did not render — login may have failed');
+    }
+    await new Promise(r => setTimeout(r, 1500));
+
+    const orders: { orderId: string; date: string }[] = await this.page.$$eval(
+      'li[orderid]',
+      (lis: any[]) => lis.map(li => ({
+        orderId: li.getAttribute('orderid') || '',
+        date: li.getAttribute('orderdate') || '',
+      }))
+    );
+    this.log(`found ${orders.length} orders in list`);
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    for (let i = 0; i < orders.length; i++) {
+      this.checkAborted();
+      const { orderId, date } = orders[i];
+      if (!orderId || !date) continue;
+
+      if (new Date(date) < oneYearAgo) {
+        this.log(`stopping at older order ${date}`);
+        break;
+      }
+
+      if (this.cache.has(date)) {
+        this.log(`using cache for ${date}`);
+        continue;
+      }
+
+      this.log(`(${i + 1}/${orders.length}) scraping order ${orderId} — ${date}`);
+      await this.scrapeOrderDetail(orderId, date);
+    }
+
+    const metadata = this.getMetadata();
+    metadata.lastFetchTimestamp = Date.now();
+    this.saveMetadata(metadata);
+  }
+
+  // Clicks into an order row, scrapes items, stores them, navigates back.
+  private async scrapeOrderDetail(orderId: string, dateKey: string): Promise<void> {
+    await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null),
+      this.page.evaluate((id: string) => {
+        const li = document.querySelector(`li[orderid="${id}"]`);
+        const btn = li?.querySelector('button');
+        (btn as HTMLElement | null)?.click();
+      }, orderId),
+    ]);
+
+    try {
+      await this.page.waitForSelector('.order-history-producttile_name', { timeout: 30000 });
+    } catch {
+      this.log(`no items rendered for order ${orderId}, caching empty`);
+    }
+    await new Promise(r => setTimeout(r, 1500));
+
+    const items = await this.page.$$eval('.order-history-list_item', (rows: any[]) => rows.map(el => {
+      const name = el.querySelector('.order-history-producttile_name')?.textContent?.trim() || '';
+      const qtyText = (el.querySelector('#product-pricelabel-quantity')
+        || el.querySelector('.order-history-producttile_quantity'))?.textContent?.trim() || '';
+      const totalText = el.querySelector('.order-history-producttile_totalcost')?.textContent?.trim() || '';
+
+      // "2 x $2.50 ea." → quantity=2, unitPrice=2.50
+      const m = qtyText.match(/(\d+(?:\.\d+)?)\s*x\s*\$?([\d.]+)/i);
+      const quantity = m ? parseFloat(m[1]) : 1;
+      let price = m ? parseFloat(m[2]) : 0;
+      if (!price) {
+        const total = parseFloat(totalText.replace(/[^\d.]/g, ''));
+        if (!isNaN(total) && quantity) price = total / quantity;
+      }
+      return name ? { name, price, quantity } : null;
+    }));
+
+    this.cache.set(dateKey, items);
+    this.addDateToYearCache(dateKey);
+
+    await Promise.all([
+      this.page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null),
+      this.page.goBack({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => null),
+    ]);
+    try { await this.page.waitForSelector('li[orderid]', { timeout: 15000 }); } catch {}
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   private getMetadata(): ScraperMetadata {
     try {
-      if (require('fs').existsSync(this.metadataFilePath)) {
-        const data = require('fs').readFileSync(this.metadataFilePath, 'utf8');
-        return JSON.parse(data);
+      if (fs.existsSync(this.metadataFilePath)) {
+        return JSON.parse(fs.readFileSync(this.metadataFilePath, 'utf8'));
       }
-    } catch (error) {
-      console.warn('Error reading metadata file:', error);
+    } catch (e) {
+      console.warn('metadata read error:', e);
     }
-    return {
-      lastFetchTimestamp: 0,
-      yearCaches: {}
-    };
+    return { lastFetchTimestamp: 0, yearCaches: {} };
   }
 
   private saveMetadata(metadata: ScraperMetadata) {
-    try {
-      require('fs').writeFileSync(
-        this.metadataFilePath,
-        JSON.stringify(metadata, null, 2),
-        'utf8'
-      );
-    } catch (error) {
-      console.error('Error saving metadata file:', error);
-    }
+    fs.writeFileSync(this.metadataFilePath, JSON.stringify(metadata, null, 2), 'utf8');
   }
 
   private shouldRefreshData(): boolean {
-    const metadata = this.getMetadata();
-    const now = Date.now();
-    const hoursSinceLastFetch = (now - metadata.lastFetchTimestamp) / (1000 * 60 * 60);
-    return hoursSinceLastFetch >= 24;
+    const hoursSince = (Date.now() - this.getMetadata().lastFetchTimestamp) / 3600000;
+    return hoursSince >= 24;
   }
 
   private addDateToYearCache(date: string) {
     const year = date.split('-')[0];
     const metadata = this.getMetadata();
-
-    if (!metadata.yearCaches[year]) {
-      metadata.yearCaches[year] = [];
-    }
-
+    if (!metadata.yearCaches[year]) metadata.yearCaches[year] = [];
     if (!metadata.yearCaches[year].includes(date)) {
       metadata.yearCaches[year].push(date);
       this.saveMetadata(metadata);
     }
   }
 
-  private getCachedDatesForYear(year: string): string[] {
-    const metadata = this.getMetadata();
-    return metadata.yearCaches[year] || [];
-  }
-
   private getCachedDatesFor12Months(): string[] {
     const metadata = this.getMetadata();
-
-    const currentYear = new Date().getFullYear().toString();
-    const pastYear = (new Date().getFullYear() - 1).toString();
-
-    let result = [];
-    const pastYearCaches = metadata.yearCaches[pastYear].sort() || [];
-
-    for (const ymdKey of pastYearCaches) {
-      if (new Date(ymdKey) > new Date(new Date().setFullYear(new Date().getFullYear() - 1))) {
-        result.push(ymdKey);
-      }
-    }
-
-    const currentYearResult = metadata.yearCaches[currentYear].sort() || [];
-    result = result.concat(currentYearResult);
-
-    return result;
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - 1);
+    return Object.values(metadata.yearCaches)
+      .flat()
+      .filter(d => new Date(d) >= cutoff)
+      .sort();
   }
-
 
   async close() {
     await this.cleanup();
   }
 
+  async clipCoupons() {
+    throw new Error('clipCoupons not implemented for the new Hannaford UI');
+  }
+
   processOrderData(purchases: PurchaseData[]) {
-    // Helper function to get category name
     const getCategoryName = (itemName: string): string => {
       for (const [category, pattern] of Object.entries(categoryMappings)) {
-        if (pattern.test(itemName)) {
-          return category;
-        }
+        if (pattern.test(itemName)) return category;
       }
-      return itemName; // Default category if no match found
+      return itemName;
     };
 
-    // Track price ranges for categories
     const priceRanges = new Map<string, { min: number; max: number }>();
 
-    // First pass to find minimum prices and apply default prices
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
 
-      // Apply default price if price is 0
       if (purchase.unitPrice === 0) {
         const defaultPrice = findDefaultPrice(purchase.item);
-        if (defaultPrice !== null) {
-          purchase.unitPrice = defaultPrice;
-        } else {
-          console.warn(`No default price found for item: ${purchase.item}`);
-        }
+        if (defaultPrice !== null) purchase.unitPrice = defaultPrice;
+        else console.warn(`No default price found for item: ${purchase.item}`);
       }
 
-      if (purchase.unitPrice > 0) {  // Only consider non-zero prices
+      if (purchase.unitPrice > 0) {
         const current = priceRanges.get(categoryName) ?? { min: Infinity, max: -Infinity };
         priceRanges.set(categoryName, {
           min: Math.min(current.min, purchase.unitPrice),
-          max: Math.max(current.max, purchase.unitPrice)
+          max: Math.max(current.max, purchase.unitPrice),
         });
       }
     });
 
-    // Group purchases by item and calculate monthly breakdowns
     const itemMap = new Map();
-
-    // First pass: Initialize items and track monthly quantities
     purchases.forEach(purchase => {
       const categoryName = getCategoryName(purchase.item);
       const month = purchase.date.toLocaleString('default', { month: 'long' });
@@ -581,14 +351,12 @@ export class HannafordScraper {
           monthlySpent: {},
           totalSpent: 0,
           includedItems: new Set<string>(),
-          includedItemsPerMonth: {}
+          includedItemsPerMonth: {},
         });
       }
 
       const itemData = itemMap.get(key);
       itemData.timesPurchased += purchase.quantity;
-
-      // Track both quantity and actual spending per month
       if (!itemData.monthlyBreakdown[month]) {
         itemData.monthlyBreakdown[month] = 0;
         itemData.monthlySpent[month] = 0;
@@ -601,23 +369,21 @@ export class HannafordScraper {
       itemData.includedItemsPerMonth[month].add(purchase.item);
     });
 
-    // Calculate average spent per month for each item
-    for (const itemData of itemMap.values()) {
-      const totalMonthlySpent = Object.values(itemData.monthlySpent).reduce((sum: number, spent: number) => sum + spent, 0);
+    for (const itemData of Array.from(itemMap.values())) {
+      const totalMonthlySpent = (Object.values(itemData.monthlySpent) as number[]).reduce((sum, s) => sum + s, 0);
       const numberOfMonths = Object.keys(itemData.monthlySpent).length;
       itemData.spentPerMonth = numberOfMonths > 0 ? totalMonthlySpent / numberOfMonths : 0;
     }
 
-    // Convert to array and sort by spent per month (descending)
     return Array.from(itemMap.values())
       .map(item => ({
         ...item,
         includedItems: Array.from(item.includedItems).sort(),
         includedItemsPerMonth: Object.fromEntries(
           Object.entries(item.includedItemsPerMonth).map(
-            ([month, items]) => [month, Array.from(items).sort()]
+            ([month, items]) => [month, Array.from(items as Set<string>).sort()]
           )
-        )
+        ),
       }))
       .sort((a, b) => b.spentPerMonth - a.spentPerMonth);
   }

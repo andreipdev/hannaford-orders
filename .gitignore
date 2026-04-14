@@ -4,4 +4,4 @@
 node_modules
 .next
 .cache/
-.cache/
+.chrome-profile/
