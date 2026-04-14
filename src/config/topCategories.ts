@@ -1,15 +1,15 @@
 import { categoryMappings } from './categories';
 
 export const topCategoryMappings: { [key: string]: string[] } = {
-  'Meat/Sides': ['Ground Beef', 'Hot Dogs', 'Chicken', 'Pepperoni', 'Bacon', 'Salmon', 'Ground Turkey', 'Steak', 'Pork', 'Tofu', 'Starkist', 'Pepperoni/Sausage', 'BBQ'],
+  'Meat/Sides': ['Ground Beef', 'Hot Dogs', 'Chicken', 'Pepperoni', 'Bacon', 'Salmon', 'Ground Turkey', 'Steak', 'Pork', 'Tofu', 'Starkist', 'Pepperoni/Sausage', 'BBQ', 'Roast Beef', 'Turkey', 'Ham', 'Hot Wings'],
   'Dairy & Eggs': ['Eggs', 'Butter', 'Grated Cheese & Parmesan', 'Whole Cheese', 'Whipping Cream/Heavy Cream', 'Sour Cream', 'Whipped Creme', 'Camembert'],
   'Pantry': ['Pasta', 'Rice', 'Vinegar', 'Chocolate Chips', 'Couscous', 'Baking (flour, sugar,...)', 'Oil', 'Salt', 'Beans', 'Stock & Broth', 'Tomato Sauce', 'Spices/Sauces', 'Panera Mac and Cheese', 'Homemade Pizza', 'Potatoes', 'Homemade Sushi'],
-  'Snacks & Sweets': ['LU Ecolier', 'Donuts', 'Ice Cream', 'Chocolate Candies', 'Goldfish', 'Cookies', 'Marshmallows', 'Chips', 'Nutella Crackers', 'Nutella', 'Cereal Bars', 'Other Snacks', 'Cereal', 'Pudding', 'Cake', 'Yogurt'],
+  'Snacks & Sweets': ['LU Ecolier', 'Donuts', 'Ice Cream', 'Chocolate Candies', 'Goldfish', 'Cookies', 'Marshmallows', 'Chips', 'Nutella Crackers', 'Nutella', 'Cereal Bars', 'Other Snacks', 'Cereal', 'Pudding', 'Cake', 'Yogurt', 'Beef Jerky'],
   'Beverages': ['Energy Drinks', 'Beer/Cider', 'Coffee', 'Other Drinks', 'Milk & Chocolate Milk', 'Gatorade Cool Blue', 'K-Cup', 'Swiss Miss'],
-  'Frozen Foods': ['Fries', 'Frozen Pizza'],
+  'Frozen Foods': ['Fries', 'Frozen Pizza', 'Frozen Meals'],
   'Fresh Produce': ['Vegetables', 'Fruits', 'Salad'],
   'Bread & Bakery': ['White Bread', 'Baguette', 'Naan', 'Crescents', 'Bread'],
-  'Household': ['Hand Soap', 'Paper towels', 'Trash Bags', 'Clothes Washing', 'Toilet Paper', 'Spray Cleaners', 'Foil & Parchment', 'Dishwashing', 'Tissues', 'Other Cleaning Products', 'Ziploc', 'Ice Melt', 'Flowers', 'Plates/Cups'],
+  'Household': ['Hand Soap', 'Paper towels', 'Trash Bags', 'Clothes Washing', 'Toilet Paper', 'Spray Cleaners', 'Foil & Parchment', 'Dishwashing', 'Tissues', 'Other Cleaning Products', 'Ziploc', 'Ice Melt', 'Flowers', 'Plates/Cups', 'Office Supplies', 'Bags & Fees', 'Gift Cards'],
   'Personal Care': ['Deodorant', 'Shampoo & Conditioner', 'Body Wash', 'Dental', 'Hair Gel', 'Medecin/Vitamins', 'Hair Color', 'Wipes', 'Chapstick', 'Other Personal'],
   'International': ['Pilmeni', 'Samosa', 'Ramen', 'Tacos & Tortillas'],
   'Other': [] // Will contain any categories not explicitly mapped above
