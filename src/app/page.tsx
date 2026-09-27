@@ -45,10 +45,11 @@ export default function Home() {
         const response = await fetch('/api/grocery-data', {
           signal: controller.signal,
           headers: {
-            'Connection': 'keep-alive'
+            'X-Hannaford-Local': '1'
           }
         });
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Could not fetch grocery data.');
         setGroceryData(data);
         setHasLoaded(true);
       } catch (error) {
@@ -70,7 +71,9 @@ export default function Home() {
   }, [hasLoaded]);
 
   const handleClipCoupons = async () => {
-    const response = await fetch('/api/clip-coupons', { method: 'POST' });
+    const response = await fetch('/api/clip-coupons', {
+      method: 'POST', headers: { 'X-Hannaford-Local': '1' }
+    });
     if (!response.ok) {
       console.error('Error clipping coupons:', await response.text());
     }
