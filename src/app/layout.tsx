@@ -1,9 +1,9 @@
-import { ChakraProvider } from '@chakra-ui/react'
+import { Providers } from './providers'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Hannaford Orders Tracker',
-  description: 'Track your Hannaford grocery orders and clip coupons',
+  description: 'Review your Hannaford purchase history locally',
 }
 
 export default function RootLayout({
@@ -14,9 +14,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ChakraProvider>
+        <Providers>
           {children}
-        </ChakraProvider>
+        </Providers>
       </body>
     </html>
   )

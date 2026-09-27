@@ -1,35 +1,24 @@
 'use client'
-import { Box, Button, Container, Heading, Flex, useDisclosure, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from '@chakra-ui/react'
+import { Box, Container, Heading, Flex, useDisclosure, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from '@chakra-ui/react'
 import { useEffect, useState } from 'react'
 import { GroceryTable } from '../components/GroceryTable'
 import { MonthlyBreakdownModal } from '../components/MonthlyBreakdownModal'
 import { MonthlyItemsModal } from '../components/MonthlyItemsModal'
 import { GroceryData } from '../types/groceryTypes'
+import { getDisplayMonth } from '../lib/months'
 
 export default function Home() {
   const [groceryData, setGroceryData] = useState<GroceryData[]>([])
   const [selectedItem, setSelectedItem] = useState<GroceryData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [hasLoaded, setHasLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState(0)
   
-  // Get current and previous month names
-  const getCurrentMonthName = () => {
-    const date = new Date();
-    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-  };
-  
-  const getPreviousMonthName = () => {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-  };
-  
-  const currentMonth = getCurrentMonthName();
-  const previousMonth = getPreviousMonthName();
-  const currentMonthShort = new Date().toLocaleString('default', { month: 'long' });
-  const previousMonthShort = new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' });
-  
+  const currentMonth = getDisplayMonth();
+  const previousMonth = getDisplayMonth(-1);
+  const currentMonthShort = currentMonth;
+  const previousMonthShort = previousMonth;
+
   // Separate disclosure hooks for different modals
   const { isOpen: isBreakdownOpen, onOpen: onBreakdownOpen, onClose: onBreakdownClose } = useDisclosure()
   const { isOpen: isMonthlyItemsOpen, onOpen: onMonthlyItemsOpen, onClose: onMonthlyItemsClose } = useDisclosure()
@@ -38,9 +27,6 @@ export default function Home() {
     const controller = new AbortController();
 
     const fetchData = async () => {
-      if (hasLoaded) return;
-
-      setIsLoading(true);
       try {
         const response = await fetch('/api/grocery-data', {
           signal: controller.signal,
@@ -50,16 +36,15 @@ export default function Home() {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Could not fetch grocery data.');
-        setGroceryData(data);
-        setHasLoaded(true);
+        if (!controller.signal.aborted) setGroceryData(data);
       } catch (error) {
         if (error.name === 'AbortError') {
           console.log('Fetch aborted');
         } else {
-          console.error('Error fetching data:', error);
+          setLoadError(error instanceof Error ? error.message : 'Could not fetch grocery data.');
         }
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
 
@@ -68,27 +53,18 @@ export default function Home() {
     return () => {
       controller.abort();
     };
-  }, [hasLoaded]);
-
-  const handleClipCoupons = async () => {
-    const response = await fetch('/api/clip-coupons', {
-      method: 'POST', headers: { 'X-Hannaford-Local': '1' }
-    });
-    if (!response.ok) {
-      console.error('Error clipping coupons:', await response.text());
-    }
-  }
+  }, []);
 
   return (
     <Container maxW="container.xl" py={5}>
       <Flex direction="column" gap={6}>
         <Flex justifyContent="space-between" alignItems="center">
           <Heading size="lg">Most Purchased Items</Heading>
-          <Button colorScheme="blue" onClick={handleClipCoupons}>
-            Clip all coupons
-          </Button>
+
         </Flex>
 
+        {isLoading && <Text role="status">Loading purchase history…</Text>}
+        {loadError && <Text role="alert" color="red.700">{loadError}</Text>}
         <Tabs variant="enclosed" onChange={(index) => setActiveTab(index)}>
           <TabList>
             <Tab>Top Categories</Tab>

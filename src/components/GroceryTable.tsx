@@ -9,11 +9,10 @@ interface GroceryTableProps {
   onItemClick: (item: GroceryData) => void
 }
 
-import { categoryMappings } from '../config/categories'
-import { topCategoryMappings, getTopCategory } from '../config/topCategories'
+import { getDisplayMonth } from '../lib/months'
+import { getTopCategory } from '../config/topCategories'
 
 export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTableProps) => {
-  console.log(groceryData);
 
   const organizeDataByTopCategory = () => {
     const organized: { [topCategory: string]: GroceryData[] } = {};
@@ -34,8 +33,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
   // Filter data based on the view mode
   const getFilteredData = () => {
     if (viewMode === 'pastMonth') {
-      // Filter for current month (March)
-      const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+      // Filter for current month
+      const currentMonthName = getDisplayMonth();
 
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the current month
@@ -47,10 +46,8 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
         return item.monthlyBreakdown[currentMonthName] > 0;
       });
     } else if (viewMode === 'beforeLastMonth') {
-      // Filter for previous month (February)
-      const date = new Date();
-      date.setMonth(date.getMonth() - 1);
-      const previousMonthName = date.toLocaleString('default', { month: 'long' });
+      // Filter for previous month
+      const previousMonthName = getDisplayMonth(-1);
 
       return groceryData.filter(item => {
         // Check if the item has monthlyBreakdown and if any purchase was made in the previous month
@@ -73,9 +70,9 @@ export const GroceryTable = ({ groceryData, viewMode, onItemClick }: GroceryTabl
 
       // Get the appropriate month name based on view mode
       const monthName = viewMode === 'pastMonth'
-        ? new Date().toLocaleString('default', { month: 'long' })
+        ? getDisplayMonth()
         : viewMode === 'beforeLastMonth'
-          ? new Date(new Date().setMonth(new Date().getMonth() - 1)).toLocaleString('default', { month: 'long' })
+          ? getDisplayMonth(-1)
           : '';
 
 

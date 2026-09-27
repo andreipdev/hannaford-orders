@@ -6,31 +6,32 @@
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --hostname 127.0.0.1",
-    "test": "node --test tests/*.test.js",
-    "typecheck": "tsc --noEmit --incremental false",
-    "lint": "next lint",
+    "test": "node --import tsx --test tests/*.test.js tests/*.test.ts",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
+    "lint": "eslint .",
     "start:hannaford": "node scripts/start-with-credentials.js"
   },
   "dependencies": {
-    "@chakra-ui/react": "^2.8.2",
+    "@chakra-ui/react": "^2.10.10",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "dotenv": "^16.4.5",
-    "framer-motion": "^10.16.5",
-    "next": "14.0.3",
-    "puppeteer": "^21.11.0",
-    "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "react": "^18",
-    "react-dom": "^18"
+    "framer-motion": "^13.4.4",
+    "next": "^16.3.6",
+    "puppeteer": "^25.12.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/puppeteer": "^5.4.7",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.3",
+    "eslint-config-next": "^16.3.6",
+    "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

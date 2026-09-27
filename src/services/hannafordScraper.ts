@@ -1,12 +1,8 @@
 import path from 'path';
 import fs from 'fs';
-import puppeteerExtra from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import puppeteer from 'puppeteer';
 import { CacheService } from './cacheService';
-import { categoryMappings } from '../config/categories';
-import { findDefaultPrice } from '../config/defaultPrices';
-
-puppeteerExtra.use(StealthPlugin());
+import { processOrderData, type PurchaseData } from './orderData';
 
 interface HannafordCredentials {
   username: string;
@@ -16,13 +12,6 @@ interface HannafordCredentials {
 interface ScraperMetadata {
   lastFetchTimestamp: number;
   yearCaches: { [year: string]: string[] };
-}
-
-interface PurchaseData {
-  item: string;
-  unitPrice: number;
-  quantity: number;
-  date: Date;
 }
 
 const ORDERS_URL = 'https://www.hannaford.com/account/history/invoice/in-store';
@@ -65,13 +54,10 @@ export class HannafordScraper {
     // Hannaford is behind DataDome — headless is almost always flagged.
     // Default to headful; set HANNAFORD_HEADLESS=1 to override once cookies are warm.
     const headless = process.env.HANNAFORD_HEADLESS === '1';
-    this.browser = await puppeteerExtra.launch({
-      headless: headless ? 'new' : false,
+    this.browser = await puppeteer.launch({
+      headless,
       userDataDir: this.profileDir,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
         '--window-size=1400,1000',
       ],
     });
@@ -307,84 +293,6 @@ export class HannafordScraper {
   }
 
   processOrderData(purchases: PurchaseData[]) {
-    const getCategoryName = (itemName: string): string => {
-      for (const [category, pattern] of Object.entries(categoryMappings)) {
-        if (pattern.test(itemName)) return category;
-      }
-      return itemName;
-    };
-
-    const priceRanges = new Map<string, { min: number; max: number }>();
-
-    purchases.forEach(purchase => {
-      const categoryName = getCategoryName(purchase.item);
-
-      if (purchase.unitPrice === 0) {
-        const defaultPrice = findDefaultPrice(purchase.item);
-        if (defaultPrice !== null) purchase.unitPrice = defaultPrice;
-        else console.warn(`No default price found for item: ${purchase.item}`);
-      }
-
-      if (purchase.unitPrice > 0) {
-        const current = priceRanges.get(categoryName) ?? { min: Infinity, max: -Infinity };
-        priceRanges.set(categoryName, {
-          min: Math.min(current.min, purchase.unitPrice),
-          max: Math.max(current.max, purchase.unitPrice),
-        });
-      }
-    });
-
-    const itemMap = new Map();
-    purchases.forEach(purchase => {
-      const categoryName = getCategoryName(purchase.item);
-      const month = purchase.date.toLocaleString('default', { month: 'long' });
-      const key = categoryName;
-
-      if (!itemMap.has(key)) {
-        itemMap.set(key, {
-          item: categoryName,
-          category: categoryName,
-          unitPrice: purchase.unitPrice || (priceRanges.get(categoryName)?.min || 0),
-          priceRange: priceRanges.get(categoryName) || { min: 0, max: 0 },
-          timesPurchased: 0,
-          monthlyBreakdown: {},
-          monthlySpent: {},
-          totalSpent: 0,
-          includedItems: new Set<string>(),
-          includedItemsPerMonth: {},
-        });
-      }
-
-      const itemData = itemMap.get(key);
-      itemData.timesPurchased += purchase.quantity;
-      if (!itemData.monthlyBreakdown[month]) {
-        itemData.monthlyBreakdown[month] = 0;
-        itemData.monthlySpent[month] = 0;
-        itemData.includedItemsPerMonth[month] = new Set<string>();
-      }
-      itemData.monthlyBreakdown[month] += purchase.quantity;
-      itemData.monthlySpent[month] += purchase.unitPrice * purchase.quantity;
-      itemData.totalSpent += purchase.unitPrice * purchase.quantity;
-      itemData.includedItems.add(purchase.item);
-      itemData.includedItemsPerMonth[month].add(purchase.item);
-    });
-
-    for (const itemData of Array.from(itemMap.values())) {
-      const totalMonthlySpent = (Object.values(itemData.monthlySpent) as number[]).reduce((sum, s) => sum + s, 0);
-      const numberOfMonths = Object.keys(itemData.monthlySpent).length;
-      itemData.spentPerMonth = numberOfMonths > 0 ? totalMonthlySpent / numberOfMonths : 0;
-    }
-
-    return Array.from(itemMap.values())
-      .map(item => ({
-        ...item,
-        includedItems: Array.from(item.includedItems).sort(),
-        includedItemsPerMonth: Object.fromEntries(
-          Object.entries(item.includedItemsPerMonth).map(
-            ([month, items]) => [month, Array.from(items as Set<string>).sort()]
-          )
-        ),
-      }))
-      .sort((a, b) => b.spentPerMonth - a.spentPerMonth);
+    return processOrderData(purchases);
   }
 }

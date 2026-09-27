@@ -6,7 +6,7 @@ A personal, single-user tool for reviewing Hannaford purchase history and monthl
 
 ## Setup
 
-Use Node.js 22 LTS and npm, plus a Hannaford account that you own.
+Use Node.js 22.12 or newer (Node 22 LTS recommended) and npm, plus a Hannaford account that you own.
 
 ```sh
 git clone https://github.com/andreipdev/hannaford-orders.git
@@ -36,10 +36,14 @@ Coupon clipping is currently unimplemented and its endpoint returns HTTP 501.
 ## Checks
 
 ```sh
+npm run lint
 npm test
 npm run typecheck
+npm run build
 ```
 
-GitHub Actions runs these checks without real credentials or contacting Hannaford. Request-policy tests cover normal local access, foreign origins, unexpected hosts and missing custom headers. They do not verify the live login flow or guarantee the safety of a public deployment.
+GitHub Actions runs lint, nine tests, TypeScript and a production build without real credentials or contacting Hannaford. Tests cover the local request policy, category totals, fractional quantities, default prices without input mutation, year boundaries and month-end selection. They do not verify the live login flow or guarantee the safety of a public deployment.
 
-The dependency stack and scraper remain experimental. Before presenting this as production software, review dependencies, test current account flows and add data-processing coverage. Contributions and reproducible bug reports are welcome.
+The stack uses Next.js 16, React 19 and Puppeteer 25. Puppeteer uses its normal browser sandbox; no stealth plugin is included. Live site compatibility still requires an account-owner check after site or browser changes. Contributions and reproducible bug reports are welcome.
+
+Monthly groups include the year and preserve the calendar date of receipts. “Spent per Month” averages months with purchases for that category, not every month in the lookback window. Missing prices may use configured estimates; unknown missing prices remain zero, so totals are exploratory rather than accounting-grade.
